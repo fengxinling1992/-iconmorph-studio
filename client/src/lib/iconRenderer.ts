@@ -28,7 +28,7 @@ export const styleCatalog: Array<{ id: StyleId; index: string; name: string; sho
   { id: "duotone", index: "01", name: "双色分层", short: "顶层与底层的色彩叠置", suggestion: "SVG / PNG 均适合" },
   { id: "gradient", index: "02", name: "线性渐变", short: "主题色驱动的轮廓填充", suggestion: "SVG / PNG 均适合" },
   { id: "glass", index: "03", name: "柔和玻璃", short: "低模糊与柔光高光", suggestion: "复杂效果建议 PNG" },
-  { id: "extrude", index: "04", name: "2.5D 轻拟物", short: "正面、侧面与底面的两向挤出", suggestion: "复杂效果建议 PNG" },
+  { id: "extrude", index: "04", name: "2.5D 轻拟物", short: "30° 等角投影与三档分面明暗", suggestion: "复杂效果建议 PNG" },
   { id: "scene", index: "05", name: "3D 插画场景", short: "等轴底座上的毛玻璃实体", suggestion: "完整质感建议 PNG" },
 ];
 
@@ -165,6 +165,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const gradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-main`);
   const gradientSceneCurrent = gradientFrame(70, 62, 180, 180, `whole-${uid}-scene`);
   const createIntegratedExtrusion = (originX: number, originY: number, width: number, shiftScale: number, angle: number, maskKey: string) => {
+    // 标准等角参考以 30° 为基准：默认右侧和底侧外扩均与水平轴形成 30° 关系。
     const radians = (angle * Math.PI) / 180;
     const shift = extrusion * shiftScale;
     const offsetX = Math.cos(radians) * shift;
