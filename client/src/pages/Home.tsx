@@ -4,6 +4,7 @@
  */
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -15,7 +16,6 @@ import {
   Clapperboard,
   Download,
   FileImage,
-  FolderUp,
   Layers3,
   MousePointer2,
   Palette,
@@ -258,26 +258,30 @@ export default function Home() {
     } finally { setIsExporting(false); }
   };
 
+  const exportPanel = <div className="export-panel export-dialog-panel"><div className="export-head"><div><span className="eyebrow">E / 导出产物</span><h2>准备下载</h2></div><FileImage size={19}/></div><div className="format-options"><button onClick={() => setFormats((current) => current.includes("svg") ? current.filter((format) => format !== "svg") : [...current, "svg"])} className={formats.includes("svg") ? "format-option format-selected" : "format-option"}><span className="format-check">{formats.includes("svg") && <Check size={12}/>}</span><div><strong>可编辑 SVG</strong><small>内联场景素材，离线打开仍可完整显示</small></div></button><button onClick={() => setFormats((current) => current.includes("png") ? current.filter((format) => format !== "png") : [...current, "png"])} className={formats.includes("png") ? "format-option format-selected" : "format-option"}><span className="format-check">{formats.includes("png") && <Check size={12}/>}</span><div><strong>透明底 PNG</strong><small>保留完整光影与玻璃质感</small></div></button></div><div className="resolution-row"><span>PNG 分辨率</span><div>{[2,3,4].map((value) => <button key={value} onClick={() => setResolution(value)} className={resolution === value ? "resolution-active" : ""}>{value}×</button>)}</div></div><p className="export-tip"><Sparkles size={14}/> 批量下载会输出当前勾选的风格；SVG 会保留所见的场景素材、装饰、渐变与滤镜。</p><Button disabled={isExporting} onClick={exportBundle} className="bundle-button">{isExporting ? <RefreshCw className="spin-icon" size={16}/> : <ArrowDownToLine size={16}/>} {isExporting ? "正在打包…" : `打包下载 ${isBatch ? "批量结果" : "已选结果"}`}</Button>{exportNote && <p className="export-note"><Check size={13}/>{exportNote}</p>}</div>;
+
   return (
+    <Dialog>
     <div className="app-shell">
       <header className="topbar">
         <div className="brand-lockup">
           <img src="/manus-storage/iconmorph-mark_cff258a8.png" alt="" className="brand-mark" />
-          <div><p className="brand-name">IconMorph <span>Studio</span></p><p className="brand-subtitle">SVG MATERIAL LAB</p></div>
+          <div><p className="brand-name">IconMorph</p><p className="brand-subtitle">SVG LAB</p></div>
         </div>
-        <div className="topbar-middle"><span className="project-dot" /> <span>源资产工作台</span><span className="slash">/</span><span className="muted-topcopy">保留路径与分组结构</span></div>
+        <div className="topbar-middle"><span>工作台</span></div>
         <div className="topbar-actions">
           <button className="help-button" aria-label="使用指南"><CircleHelp size={17} /></button>
-          <Button onClick={() => assetInput.current?.click()} className="import-button"><FolderUp size={16} /> 导入 SVG</Button>
+          <DialogTrigger asChild><Button className="export-trigger"><ArrowDownToLine size={16} /> 导出结果</Button></DialogTrigger>
           <input ref={assetInput} className="visually-hidden" type="file" accept=".svg,image/svg+xml" multiple onChange={parseAssets} />
         </div>
       </header>
 
       <main className="workspace">
         <aside className="asset-rail">
-          <div className="rail-head"><div><span className="eyebrow">A / 资产库</span><h2>SVG 真源</h2></div><button className="icon-button" onClick={() => assetInput.current?.click()} aria-label="上传 SVG"><Plus size={17} /></button></div>
+          <div className="rail-head"><div><span className="eyebrow">A / 资产库</span><h2>SVG 组件库</h2></div><button className="icon-button" onClick={() => assetInput.current?.click()} aria-label="上传 SVG"><Plus size={17} /></button></div>
           <button className="library-import" onClick={() => assetInput.current?.click()}><Upload size={17}/><span>上传图标</span><small>支持多选</small></button>
-          <div className="library-label"><span>项目字体图标</span><span>{assets.length}</span></div>
+          <div className="library-label"><span>图标库分组</span><span>{assets.length}</span></div>
+          <div className="library-group"><span>DEFAULT / 01</span><strong>基础组件</strong><small>{assets.length} 枚图标 · 等待载入图标库文件</small></div>
           <div className="asset-list">
             {assets.map((asset) => <button key={asset.id} onClick={() => setActiveId(asset.id)} className={`asset-row ${asset.id === activeId ? "asset-row-active" : ""}`}>
               <span className="asset-thumbnail" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} />
@@ -289,12 +293,7 @@ export default function Home() {
         </aside>
 
         <section className="canvas-column">
-          <div className="context-strip">
-            <div className="breadcrumb"><Archive size={14}/><span>资产库</span><ChevronDown size={14}/><strong>{activeAsset.name}</strong></div>
-            <div className="mode-switch"><button className={!isBatch ? "mode-active" : ""} onClick={() => setIsBatch(false)}><MousePointer2 size={14}/> 单图</button><button className={isBatch ? "mode-active" : ""} onClick={() => setIsBatch(true)}><Layers3 size={14}/> 批量 <span>{assets.length}</span></button></div>
-          </div>
-
-          <div className="canvas-header"><div><span className="eyebrow">B / 生成预览</span><h1>沿用轮廓，换一种材料语言。</h1><p>每个变体均由当前 SVG 路径实时生成，不使用垫图或导出后再编辑。</p></div><Button variant="outline" className="regenerate" onClick={() => { setParams({ ...params }); setExportNote("已按当前参数刷新全部预览"); }}><RefreshCw size={15}/> 基于当前参数重新生成</Button></div>
+          <div className="canvas-header"><div><span className="eyebrow">B / 生成预览</span><h1>SVG风格化实验室</h1><p>每个变体均由当前 SVG 路径实时生成，不使用垫图或导出后再编辑。</p></div><Button variant="outline" className="regenerate" onClick={() => { setParams({ ...params }); setExportNote("已按当前参数刷新全部预览"); }}><RefreshCw size={15}/> 基于当前参数重新生成</Button></div>
 
           <div className={compareMode ? "preview-board compare-open" : "preview-board"}>
             <article className="source-card">
@@ -304,7 +303,7 @@ export default function Home() {
               <section className="style-library style-library-inline"><div className="inline-library-head"><span className="eyebrow">风格模板</span><span>{styleCatalog.length}</span></div><div className="style-rail">{styleCatalog.map((style) => <button key={style.id} onClick={() => setSelectedStyle(style.id)} className={`template-chip template-${style.id} ${style.id === selectedStyle ? "template-chip-active" : ""}`}><span>{style.index}</span><div><strong>{style.name}</strong><small>{style.id === selectedStyle ? "当前编辑" : style.suggestion}</small></div>{style.id === selectedStyle && <Check size={14}/>}</button>)}</div></section>
             </article>
             <div className="variant-zone">
-              <div className="variant-zone-head"><div><span className="eyebrow">{styleCatalog.length} 个材料变体</span><strong>点击标本以载入参数</strong></div><label className="compare-toggle"><span>对比源图</span><Switch checked={compareMode} onCheckedChange={setCompareMode} /></label></div>
+              <div className="variant-zone-head"><div><span className="eyebrow">{styleCatalog.length} 个材料变体</span><strong>点击标本以载入参数</strong></div></div>
               <div className="variant-grid">
                 {styleCatalog.map((style) => <article key={style.id} className={`variant-card variant-card-${style.id} ${selectedStyle === style.id ? "variant-card-selected" : ""}`} onClick={() => setSelectedStyle(style.id)}>
                   <div className="variant-meta"><span>{style.index}</span><Checkbox checked={selectedVariants.includes(style.id)} onCheckedChange={() => toggleVariant(style.id)} onClick={(event) => event.stopPropagation()} aria-label={`选择${style.name}导出`} /></div>
@@ -332,9 +331,10 @@ export default function Home() {
             <div className="parameter-group face-color-group"><div className="group-title"><Layers3 size={15}/><span>融合双分面配色</span></div><p>当前为{activeSceneFacePairLabel}挤出。两个相邻外边连续相接，可分别调整颜色。</p><div className="face-color-grid"><ColorField label={scenePrimaryFaceLabel} color={params.sideColor} onChange={(value) => updateParam("sideColor", value)} /><ColorField label={sceneSecondaryFaceLabel} color={params.bottomColor} onChange={(value) => updateParam("bottomColor", value)} /></div></div>
             <div className="parameter-group scene-assets"><div className="group-title"><Clapperboard size={15}/><span>默认场景套件</span></div><p>底座保持统一；点缀装饰与围绕装饰均可不选。正数高度会向上移动；点缀保持同类左小右大的双元素，并会自动避让主体。</p><div className="scene-kit-group"><span>点缀装饰</span><div className="scene-kit-options"><button onClick={() => updateParam("sceneObjectDecor", "none")} className={params.sceneObjectDecor === "none" ? "scene-kit-active" : ""}>无</button><button onClick={() => updateParam("sceneObjectDecor", "orb")} className={params.sceneObjectDecor === "orb" ? "scene-kit-active" : ""}>玻璃球</button><button onClick={() => updateParam("sceneObjectDecor", "cube")} className={params.sceneObjectDecor === "cube" ? "scene-kit-active" : ""}>方块</button></div></div><SliderField label="点缀高度" value={params.sceneObjectHeight} min={-90} max={90} suffix=" px" onChange={(value) => updateParam("sceneObjectHeight", value)} /><div className="scene-kit-group"><span>围绕装饰</span><div className="scene-kit-options"><button onClick={() => updateParam("sceneMotionDecor", "none")} className={params.sceneMotionDecor === "none" ? "scene-kit-active" : ""}>无</button><button onClick={() => updateParam("sceneMotionDecor", "ribbon")} className={params.sceneMotionDecor === "ribbon" ? "scene-kit-active" : ""}>飘带</button><button onClick={() => updateParam("sceneMotionDecor", "orbit")} className={params.sceneMotionDecor === "orbit" ? "scene-kit-active" : ""}>环绕</button></div></div><SliderField label="围绕高度" value={params.sceneMotionHeight} min={-90} max={90} suffix=" px" onChange={(value) => updateParam("sceneMotionHeight", value)} /><button onClick={() => baseInput.current?.click()} className="scene-upload"><span className="scene-swatch base-swatch"/><div><strong>{params.sceneBase ? "已自定义底座" : "统一默认底座"}</strong><small>上传 SVG / PNG 覆盖</small></div><Upload size={15}/></button><button onClick={() => decorInput.current?.click()} className="scene-upload"><span className="scene-swatch decor-swatch"/><div><strong>{params.sceneDecor ? "已自定义装饰" : "自定义装饰覆盖"}</strong><small>上传 SVG / PNG 覆盖全部默认装饰</small></div><Upload size={15}/></button><input ref={baseInput} className="visually-hidden" type="file" accept="image/svg+xml,image/png" onChange={(event) => readSceneAsset(event, "sceneBase")} /><input ref={decorInput} className="visually-hidden" type="file" accept="image/svg+xml,image/png" onChange={(event) => readSceneAsset(event, "sceneDecor")} /></div>
           </>}
-          <div className="export-panel"><div className="export-head"><div><span className="eyebrow">E / 导出产物</span><h2>准备下载</h2></div><FileImage size={19}/></div><div className="format-options"><button onClick={() => setFormats((current) => current.includes("svg") ? current.filter((format) => format !== "svg") : [...current, "svg"])} className={formats.includes("svg") ? "format-option format-selected" : "format-option"}><span className="format-check">{formats.includes("svg") && <Check size={12}/>}</span><div><strong>可编辑 SVG</strong><small>保留轮廓与可编辑路径</small></div></button><button onClick={() => setFormats((current) => current.includes("png") ? current.filter((format) => format !== "png") : [...current, "png"])} className={formats.includes("png") ? "format-option format-selected" : "format-option"}><span className="format-check">{formats.includes("png") && <Check size={12}/>}</span><div><strong>透明底 PNG</strong><small>保留完整光影与玻璃质感</small></div></button></div><div className="resolution-row"><span>PNG 分辨率</span><div>{[2,3,4].map((value) => <button key={value} onClick={() => setResolution(value)} className={resolution === value ? "resolution-active" : ""}>{value}×</button>)}</div></div><p className="export-tip"><Sparkles size={14}/> 3D 与复杂玻璃效果导出 SVG 时会简化部分光影，想保留完整质感建议输出 PNG。</p><Button disabled={isExporting} onClick={exportBundle} className="bundle-button">{isExporting ? <RefreshCw className="spin-icon" size={16}/> : <ArrowDownToLine size={16}/>} {isExporting ? "正在打包…" : `打包下载 ${isBatch ? "批量结果" : "已选结果"}`}</Button>{exportNote && <p className="export-note"><Check size={13}/>{exportNote}</p>}</div>
         </aside>
       </main>
     </div>
+    <DialogContent className="export-dialog" aria-describedby={undefined}><DialogHeader><span className="eyebrow">导出队列 / 当前资产</span><DialogTitle>将材料结果送入下载队列</DialogTitle></DialogHeader>{exportPanel}</DialogContent>
+    </Dialog>
   );
 }
