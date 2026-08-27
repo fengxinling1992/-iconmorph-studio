@@ -100,12 +100,20 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const sceneCurrent = iconFrame(70, 62, 180);
   const gradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-main`);
   const gradientSceneCurrent = gradientFrame(70, 62, 180, 180, `whole-${uid}-scene`);
-  const createExtrusionFace = (originX: number, originY: number, width: number, shiftScale: number, color: string, angle: number, plane: "side" | "bottom") => {
+  const createIntegratedExtrusion = (originX: number, originY: number, width: number, shiftScale: number, angle: number, maskKey: string) => {
     const radians = (angle * Math.PI) / 180;
     const shift = extrusion * shiftScale;
-    const offsetX = plane === "side" ? Math.cos(radians) * shift : Math.cos(radians) * shift * .22;
-    const offsetY = plane === "side" ? Math.sin(radians) * shift * .22 : Math.sin(radians) * shift;
-    return `<g fill="${color}">${iconFrame(originX + offsetX, originY + offsetY, width)}</g>`;
+    const offsetX = Math.cos(radians) * shift;
+    const offsetY = Math.sin(radians) * shift;
+    const steps = Math.max(4, Math.round(extrusion / 3));
+    const maskFrame = (x: number, y: number) => `<svg x="${x}" y="${y}" width="${width}" height="${width}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><g fill="#fff" stroke="#fff">${content}</g></svg>`;
+    const maskCopies = Array.from({ length: steps + 1 }, (_, index) => {
+      const ratio = index / steps;
+      return maskFrame(originX + offsetX * ratio, originY + offsetY * ratio);
+    }).join("");
+    const sideStart = Math.max(0, originX + width * .58);
+    const bottomStart = Math.min(size, originY + width * .72);
+    return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><path d="M${sideStart} 0H${size}V${size}H${sideStart}Z" fill="${side}"/><path d="M0 ${bottomStart}H${size}V${size}H0Z" fill="${bottom}"/></g>`;
   };
   const baseVisual = params.sceneBase
     ? `<image href="${escapeXml(params.sceneBase)}" x="0" y="0" width="${size}" height="${size}" preserveAspectRatio="xMidYMid slice" opacity=".92"/>`
@@ -127,14 +135,12 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g transform="translate(5 7)" fill="#173746" opacity=".12" filter="url(#soft-${uid})">${current}</g><g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientCurrent}</g><g fill="none" stroke="white" stroke-width="2.5" opacity="${(params.highlight / 140).toFixed(2)}">${current}</g>`;
   }
   if (style === "extrude") {
-    const bottomFace = createExtrusionFace(52, 52, 216, 1, bottom, params.extrusionAngle, "bottom");
-    const sideFace = createExtrusionFace(52, 52, 216, 1, side, params.extrusionAngle, "side");
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${bottomFace}${sideFace}<g fill="${front}" filter="url(#lift-${uid})">${current}</g>`;
+    const integratedExtrusion = createIntegratedExtrusion(52, 52, 216, 1, params.extrusionAngle, `volume-${uid}`);
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${integratedExtrusion}<g fill="${front}" filter="url(#lift-${uid})">${current}</g>`;
   }
   if (style === "scene") {
-    const bottomFace = createExtrusionFace(70, 62, 180, .55, bottom, 55, "bottom");
-    const sideFace = createExtrusionFace(70, 62, 180, .55, side, 55, "side");
-    artwork = `${baseVisual}<rect x="24" y="28" width="272" height="264" rx="26" fill="#F8F6F0" opacity=".24"/>${decor}<ellipse cx="164" cy="237" rx="87" ry="25" fill="#15313C" opacity=".14" filter="url(#soft-${uid})"/>${bottomFace}${sideFace}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g>`;
+    const integratedExtrusion = createIntegratedExtrusion(70, 62, 180, .55, 55, `volume-${uid}`);
+    artwork = `${baseVisual}<rect x="24" y="28" width="272" height="264" rx="26" fill="#F8F6F0" opacity=".24"/>${decor}<ellipse cx="164" cy="237" rx="87" ry="25" fill="#15313C" opacity=".14" filter="url(#soft-${uid})"/>${integratedExtrusion}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g>`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
 }
