@@ -20,6 +20,7 @@ export type RenderParams = {
   opacity: number;
   blur: number;
   highlight: number;
+  safeExtrusion: boolean;
   sceneBase?: string;
   sceneDecor?: string;
 };
@@ -37,6 +38,7 @@ const STANDARD_VIEWBOX = "0 0 100 100";
 type VisibleBounds = { x: number; y: number; width: number; height: number };
 type ContourPoint = { x: number; y: number };
 type SvgContour = { points: ContourPoint[]; closed: boolean };
+export type ExtrusionSafetyInfo = { recommendedThickness: number; riskScore: number; rationale: string };
 const visibleBoundsCache = new Map<string, VisibleBounds>();
 const contourCache = new Map<string, SvgContour[]>();
 
@@ -122,6 +124,31 @@ function getSvgContours(sourceKey: string, viewBox: string, content: string): Sv
   }
 }
 
+export function getExtrusionSafetyInfo(asset: IconAsset, requestedThickness: number): ExtrusionSafetyInfo {
+  const { viewBox, content } = safeSvg(asset.svg);
+  const contours = getSvgContours(asset.svg, viewBox, content);
+  if (!contours.length) return { recommendedThickness: requestedThickness, riskScore: 0, rationale: "当前轮廓可直接使用设定厚度" };
+  const totalPoints = contours.reduce((total, contour) => total + contour.points.length, 0);
+  const openContours = contours.filter((contour) => !contour.closed).length;
+  const sharpTurns = contours.reduce((total, contour) => {
+    if (!contour.closed || contour.points.length < 4) return total;
+    return total + contour.points.reduce((count, currentPoint, index) => {
+      const previousPoint = contour.points[(index - 1 + contour.points.length) % contour.points.length];
+      const nextPoint = contour.points[(index + 1) % contour.points.length];
+      const incoming = { x: currentPoint.x - previousPoint.x, y: currentPoint.y - previousPoint.y };
+      const outgoing = { x: nextPoint.x - currentPoint.x, y: nextPoint.y - currentPoint.y };
+      const magnitude = Math.hypot(incoming.x, incoming.y) * Math.hypot(outgoing.x, outgoing.y);
+      const cosine = magnitude ? (incoming.x * outgoing.x + incoming.y * outgoing.y) / magnitude : 1;
+      return cosine < .28 ? count + 1 : count;
+    }, 0);
+  }, 0);
+  const riskScore = Math.min(1, (openContours ? .28 : 0) + (contours.length > 4 ? .28 : 0) + (sharpTurns >= 6 && contours.length <= 2 ? .26 : 0) + (totalPoints > 104 ? .14 : 0));
+  const factor = riskScore >= .62 ? .48 : riskScore >= .36 ? .66 : riskScore >= .18 ? .8 : 1;
+  const recommendedThickness = Math.max(4, Math.min(requestedThickness, Math.round(requestedThickness * factor)));
+  const rationale = riskScore >= .62 ? "尖角与开放路径风险较高，已显著收窄" : riskScore >= .36 ? "检测到复杂子路径，已收窄" : riskScore >= .18 ? "检测到尖角密度，已轻度收窄" : "当前轮廓可直接使用设定厚度";
+  return { recommendedThickness, riskScore, rationale };
+}
+
 function escapeXml(value: string) {
   return value.replace(/[<>&"']/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[char] || char);
 }
@@ -147,7 +174,9 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const side = escapeXml(params.sideColor);
   const bottom = escapeXml(params.bottomColor);
   const front = escapeXml(params.frontColor);
-  const extrusion = Math.max(2, params.extrusion);
+  const requestedExtrusion = Math.max(2, params.extrusion);
+  const extrusionSafety = getExtrusionSafetyInfo(asset, requestedExtrusion);
+  const extrusion = params.safeExtrusion ? extrusionSafety.recommendedThickness : requestedExtrusion;
   const crop = `0 0 ${size} ${size}`;
   const [sourceX = 0, sourceY = 0, sourceWidth = 24, sourceHeight = 24] = viewBox.split(/[\s,]+/).map(Number);
   const sourceContours = getSvgContours(asset.svg, viewBox, content);
