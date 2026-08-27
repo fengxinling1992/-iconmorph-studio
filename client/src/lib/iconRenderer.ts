@@ -100,40 +100,12 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const sceneCurrent = iconFrame(70, 62, 180);
   const gradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-main`);
   const gradientSceneCurrent = gradientFrame(70, 62, 180, 180, `whole-${uid}-scene`);
-  const createExtrusionLayers = (originX: number, originY: number, width: number, shiftScale: number, color: string, angle: number, plane: "side" | "bottom") => {
-    const count = Math.max(4, Math.round(extrusion / 2));
+  const createExtrusionFace = (originX: number, originY: number, width: number, shiftScale: number, color: string, angle: number, plane: "side" | "bottom") => {
     const radians = (angle * Math.PI) / 180;
-    const unitX = Math.cos(radians);
-    const unitY = Math.sin(radians);
-    return Array.from({ length: count }, (_, index) => {
-      const ratio = (index + 1) / count;
-      const shift = ratio * extrusion * shiftScale;
-      const offsetX = plane === "side" ? unitX * shift : unitX * shift * .22;
-      const offsetY = plane === "side" ? unitY * shift * .22 : unitY * shift;
-      return `<g fill="${color}" opacity="${(0.26 + ratio * 0.58).toFixed(2)}">${iconFrame(originX + offsetX, originY + offsetY, width)}</g>`;
-    }).join("");
-  };
-  const createConnectionBand = (originX: number, originY: number, width: number, shiftScale: number, angle: number) => {
-    const count = Math.max(6, Math.round(extrusion / 1.4));
-    const radians = (angle * Math.PI) / 180;
-    const horizontal = Math.cos(radians) * extrusion * shiftScale;
-    const vertical = Math.sin(radians) * extrusion * shiftScale;
-    const sideEnd = { x: horizontal, y: vertical * .22 };
-    const bottomEnd = { x: horizontal * .22, y: vertical };
-    return Array.from({ length: count }, (_, index) => {
-      const ratio = index / Math.max(1, count - 1);
-      const x = sideEnd.x + (bottomEnd.x - sideEnd.x) * ratio;
-      const y = sideEnd.y + (bottomEnd.y - sideEnd.y) * ratio;
-      return `<g fill="${bottom}" opacity="${(.64 + ratio * .22).toFixed(2)}">${iconFrame(originX + x, originY + y, width)}</g>`;
-    }).join("");
-  };
-  const extrusionEdge = (originX: number, originY: number, width: number, shiftScale: number, angle: number) => {
-    const radians = (angle * Math.PI) / 180;
-    const horizontal = Math.cos(radians) * extrusion * shiftScale;
-    const vertical = Math.sin(radians) * extrusion * shiftScale;
-    const endX = originX + (horizontal + horizontal * .22) / 2;
-    const endY = originY + (vertical + vertical * .22) / 2;
-    return `<g fill="none" stroke="white" stroke-width=".32" stroke-opacity=".30">${iconFrame(endX, endY, width)}</g>`;
+    const shift = extrusion * shiftScale;
+    const offsetX = plane === "side" ? Math.cos(radians) * shift : Math.cos(radians) * shift * .22;
+    const offsetY = plane === "side" ? Math.sin(radians) * shift * .22 : Math.sin(radians) * shift;
+    return `<g fill="${color}">${iconFrame(originX + offsetX, originY + offsetY, width)}</g>`;
   };
   const baseVisual = params.sceneBase
     ? `<image href="${escapeXml(params.sceneBase)}" x="0" y="0" width="${size}" height="${size}" preserveAspectRatio="xMidYMid slice" opacity=".92"/>`
@@ -155,18 +127,14 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g transform="translate(5 7)" fill="#173746" opacity=".12" filter="url(#soft-${uid})">${current}</g><g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientCurrent}</g><g fill="none" stroke="white" stroke-width="2.5" opacity="${(params.highlight / 140).toFixed(2)}">${current}</g>`;
   }
   if (style === "extrude") {
-    const bottomLayers = createExtrusionLayers(52, 52, 216, 1, bottom, params.extrusionAngle, "bottom");
-    const sideLayers = createExtrusionLayers(52, 52, 216, 1, side, params.extrusionAngle, "side");
-    const connectionBand = createConnectionBand(52, 52, 216, 1, params.extrusionAngle);
-    const connectedEdge = extrusionEdge(52, 52, 216, 1, params.extrusionAngle);
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${connectionBand}${bottomLayers}${sideLayers}${connectedEdge}<g fill="${front}" filter="url(#lift-${uid})">${current}</g>`;
+    const bottomFace = createExtrusionFace(52, 52, 216, 1, bottom, params.extrusionAngle, "bottom");
+    const sideFace = createExtrusionFace(52, 52, 216, 1, side, params.extrusionAngle, "side");
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${bottomFace}${sideFace}<g fill="${front}" filter="url(#lift-${uid})">${current}</g>`;
   }
   if (style === "scene") {
-    const bottomLayers = createExtrusionLayers(70, 62, 180, .55, bottom, 55, "bottom");
-    const sideLayers = createExtrusionLayers(70, 62, 180, .55, side, 55, "side");
-    const connectionBand = createConnectionBand(70, 62, 180, .55, 55);
-    const connectedEdge = extrusionEdge(70, 62, 180, .55, 55);
-    artwork = `${baseVisual}<rect x="24" y="28" width="272" height="264" rx="26" fill="#F8F6F0" opacity=".24"/>${decor}<ellipse cx="164" cy="237" rx="87" ry="25" fill="#15313C" opacity=".14" filter="url(#soft-${uid})"/>${connectionBand}${bottomLayers}${sideLayers}${connectedEdge}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g><g fill="none" stroke="white" stroke-width=".32" opacity="${(params.highlight / 150).toFixed(2)}">${sceneCurrent}</g><path d="M49 250L164 287L276 236" fill="none" stroke="white" stroke-opacity=".64"/>`;
+    const bottomFace = createExtrusionFace(70, 62, 180, .55, bottom, 55, "bottom");
+    const sideFace = createExtrusionFace(70, 62, 180, .55, side, 55, "side");
+    artwork = `${baseVisual}<rect x="24" y="28" width="272" height="264" rx="26" fill="#F8F6F0" opacity=".24"/>${decor}<ellipse cx="164" cy="237" rx="87" ry="25" fill="#15313C" opacity=".14" filter="url(#soft-${uid})"/>${bottomFace}${sideFace}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g>`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
 }
