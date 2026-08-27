@@ -268,7 +268,7 @@ export default function Home() {
           <img src="/manus-storage/iconmorph-mark_cff258a8.png" alt="" className="brand-mark" />
           <div><p className="brand-name">IconMorph</p><p className="brand-subtitle">SVG LAB</p></div>
         </div>
-        <div className="topbar-middle"><span>工作台</span></div>
+        <div className="topbar-middle" aria-hidden="true" />
         <div className="topbar-actions">
           <button className="help-button" aria-label="使用指南"><CircleHelp size={17} /></button>
           <DialogTrigger asChild><Button className="export-trigger"><ArrowDownToLine size={16} /> 导出结果</Button></DialogTrigger>
