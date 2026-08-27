@@ -19,19 +19,17 @@ import {
   Layers3,
   MousePointer2,
   Palette,
-  PanelRightOpen,
   Plus,
   RefreshCw,
   Settings2,
   Sparkles,
   Upload,
   WandSparkles,
-  X,
   Zap,
 } from "lucide-react";
 import { ChangeEvent, useMemo, useRef, useState } from "react";
 import JSZip from "jszip";
-import { defaultIcons, IconAsset, normalizedSvgMarkup, RenderParams, renderVariantSvg, safeSvg, StyleId, styleCatalog } from "@/lib/iconRenderer";
+import { defaultIcons, IconAsset, normalizedSvgMarkup, RenderParams, renderVariantSvg, StyleId, styleCatalog } from "@/lib/iconRenderer";
 
 type OutputFormat = "svg" | "png";
 
@@ -42,15 +40,13 @@ const INITIAL_PARAMS: RenderParams = {
   sideColor: "#5B7DE8",
   frontColor: "#8B9AF7",
   angle: 135,
+  extrusionAngle: 42,
   shadowLength: 34,
   extrusion: 18,
   opacity: 72,
   blur: 8,
   highlight: 54,
-  retainStroke: true,
 };
-
-const themeColors = ["#A696FC", "#67A7FB", "#16B8A6", "#F07A5F", "#0E5D72"];
 
 function slug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/gi, "-").replace(/^-|-$/g, "") || "icon";
@@ -94,6 +90,10 @@ function SliderField({ label, value, min, max, step = 1, suffix = "", onChange }
       <Slider value={[value]} min={min} max={max} step={step} onValueChange={([next]) => onChange(next)} aria-label={label} />
     </div>
   );
+}
+
+function ColorField({ label, color, onChange }: { label: string; color: string; onChange: (color: string) => void }) {
+  return <label className="color-field"><span>{label}</span><div className="color-input"><input type="color" value={color} onChange={(event) => onChange(event.target.value)} /><code>{color.toUpperCase()}</code></div></label>;
 }
 
 function SourcePreview({ asset }: { asset: IconAsset }) {
@@ -245,10 +245,10 @@ export default function Home() {
               <div className="card-kicker"><span>SOURCE / 01</span><button aria-label="更多源图操作"><Settings2 size={15}/></button></div>
               <SourcePreview asset={activeAsset} />
               <div className="source-caption"><div><strong>{activeAsset.name}.svg</strong><span>统一 100 × 100 画布，轮廓完整适配</span></div><span className="file-chip">SVG</span></div>
-              <section className="style-library style-library-inline"><div className="inline-library-head"><span className="eyebrow">风格模板</span><span>6</span></div><div className="style-rail">{styleCatalog.map((style) => <button key={style.id} onClick={() => setSelectedStyle(style.id)} className={`template-chip template-${style.id} ${style.id === selectedStyle ? "template-chip-active" : ""}`}><span>{style.index}</span><div><strong>{style.name}</strong><small>{style.id === selectedStyle ? "当前编辑" : style.suggestion}</small></div>{style.id === selectedStyle && <Check size={14}/>}</button>)}</div></section>
+              <section className="style-library style-library-inline"><div className="inline-library-head"><span className="eyebrow">风格模板</span><span>{styleCatalog.length}</span></div><div className="style-rail">{styleCatalog.map((style) => <button key={style.id} onClick={() => setSelectedStyle(style.id)} className={`template-chip template-${style.id} ${style.id === selectedStyle ? "template-chip-active" : ""}`}><span>{style.index}</span><div><strong>{style.name}</strong><small>{style.id === selectedStyle ? "当前编辑" : style.suggestion}</small></div>{style.id === selectedStyle && <Check size={14}/>}</button>)}</div></section>
             </article>
             <div className="variant-zone">
-              <div className="variant-zone-head"><div><span className="eyebrow">6 个材料变体</span><strong>点击标本以载入参数</strong></div><label className="compare-toggle"><span>对比源图</span><Switch checked={compareMode} onCheckedChange={setCompareMode} /></label></div>
+              <div className="variant-zone-head"><div><span className="eyebrow">{styleCatalog.length} 个材料变体</span><strong>点击标本以载入参数</strong></div><label className="compare-toggle"><span>对比源图</span><Switch checked={compareMode} onCheckedChange={setCompareMode} /></label></div>
               <div className="variant-grid">
                 {styleCatalog.map((style) => <article key={style.id} className={`variant-card ${selectedStyle === style.id ? "variant-card-selected" : ""}`} onClick={() => setSelectedStyle(style.id)}>
                   <div className="variant-meta"><span>{style.index}</span><Checkbox checked={selectedVariants.includes(style.id)} onCheckedChange={() => toggleVariant(style.id)} onClick={(event) => event.stopPropagation()} aria-label={`选择${style.name}导出`} /></div>
@@ -264,12 +264,13 @@ export default function Home() {
         </section>
 
         <aside className="control-rail">
-          <div className="control-head"><div><span className="eyebrow">D / 材料参数</span><h2>{selectedTemplate.name}</h2></div><button className="icon-button" onClick={() => setParams(INITIAL_PARAMS)} title="重置参数"><RefreshCw size={15}/></button></div>
-          <p className="control-description">{selectedTemplate.short}。所有预览均在统一规范画布内等比完整显示；调整参数后，左侧的 6 个结果将同步更新。</p>
-          <div className="parameter-group"><div className="group-title"><Palette size={15}/><span>颜色系统</span></div><div className="color-row"><label><span>起始色</span><div className="color-input"><input type="color" value={params.primary} onChange={(e) => updateParam("primary", e.target.value)} /><code>{params.primary.toUpperCase()}</code></div></label><label><span>结束色</span><div className="color-input"><input type="color" value={params.secondary} onChange={(e) => updateParam("secondary", e.target.value)} /><code>{params.secondary.toUpperCase()}</code></div></label></div><div className="theme-swatches"><span>项目主题色</span><div>{themeColors.map((color) => <button key={color} onClick={() => updateParam("primary", color)} className={params.primary === color ? "swatch swatch-active" : "swatch"} style={{ backgroundColor: color }} aria-label={`采用${color}`} />)}</div></div><SliderField label="渐变角度" value={params.angle} min={0} max={360} suffix="°" onChange={(value) => updateParam("angle", value)} /></div>
-          <div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>形体与光感</span></div><SliderField label="挤出高度" value={params.extrusion} min={4} max={42} suffix=" px" onChange={(value) => updateParam("extrusion", value)} /><SliderField label="长阴影长度" value={params.shadowLength} min={8} max={76} suffix=" px" onChange={(value) => updateParam("shadowLength", value)} /><SliderField label="材质透明度" value={params.opacity} min={20} max={94} suffix="%" onChange={(value) => updateParam("opacity", value)} /><SliderField label="磨砂模糊" value={params.blur} min={0} max={24} suffix=" px" onChange={(value) => updateParam("blur", value)} /><SliderField label="边缘高光" value={params.highlight} min={0} max={100} suffix="%" onChange={(value) => updateParam("highlight", value)} /><div className="switch-row"><div><strong>保留原始线条</strong><span>关闭后不强制应用描边</span></div><Switch checked={params.retainStroke} onCheckedChange={(value) => updateParam("retainStroke", value)} /></div></div>
-          {selectedStyle === "extrude" && <div className="parameter-group face-color-group"><div className="group-title"><Layers3 size={15}/><span>2.5D 分面配色</span></div><p>与 3D 场景共用逐层挤出厚度，顶面、侧面与正面可分别设定。</p><div className="face-color-grid"><label><span>顶面</span><div className="color-input"><input type="color" value={params.topColor} onChange={(e) => updateParam("topColor", e.target.value)} /><code>{params.topColor.toUpperCase()}</code></div></label><label><span>侧面</span><div className="color-input"><input type="color" value={params.sideColor} onChange={(e) => updateParam("sideColor", e.target.value)} /><code>{params.sideColor.toUpperCase()}</code></div></label><label><span>正面</span><div className="color-input"><input type="color" value={params.frontColor} onChange={(e) => updateParam("frontColor", e.target.value)} /><code>{params.frontColor.toUpperCase()}</code></div></label></div></div>}
-          <div className="parameter-group scene-assets"><div className="group-title"><Clapperboard size={15}/><span>3D 场景素材</span></div><p>仅作用于「3D 插画场景」。所有素材将对齐同一套等轴透视。</p><button onClick={() => baseInput.current?.click()} className="scene-upload"><span className="scene-swatch base-swatch"/><div><strong>{params.sceneBase ? "已自定义底座" : "默认底座"}</strong><small>上传 SVG / PNG 覆盖</small></div><Upload size={15}/></button><button onClick={() => decorInput.current?.click()} className="scene-upload"><span className="scene-swatch decor-swatch"/><div><strong>{params.sceneDecor ? "已自定义装饰" : "默认周边装饰"}</strong><small>上传 SVG / PNG 覆盖</small></div><Upload size={15}/></button><input ref={baseInput} className="visually-hidden" type="file" accept="image/svg+xml,image/png" onChange={(event) => readSceneAsset(event, "sceneBase")} /><input ref={decorInput} className="visually-hidden" type="file" accept="image/svg+xml,image/png" onChange={(event) => readSceneAsset(event, "sceneDecor")} /></div>
+          <div className="control-head"><div><span className="eyebrow">D / 模板专属参数</span><h2>{selectedTemplate.name}</h2></div><button className="icon-button" onClick={() => setParams(INITIAL_PARAMS)} title="重置当前工作参数"><RefreshCw size={15}/></button></div>
+          <p className="control-description">{selectedTemplate.short}。此处只显示当前模板会使用的配置项；所有预览均在统一规范画布内等比完整显示。</p>
+          {selectedStyle === "duotone" && <><div className="parameter-group"><div className="group-title"><Palette size={15}/><span>分层颜色</span></div><div className="color-row"><ColorField label="顶层颜色" color={params.primary} onChange={(value) => updateParam("primary", value)} /><ColorField label="底层颜色" color={params.secondary} onChange={(value) => updateParam("secondary", value)} /></div></div><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>层间投影</span></div><SliderField label="投影远近" value={params.shadowLength} min={8} max={76} suffix=" px" onChange={(value) => updateParam("shadowLength", value)} /></div></>}
+          {selectedStyle === "gradient" && <div className="parameter-group"><div className="group-title"><Palette size={15}/><span>线性渐变</span></div><div className="color-row"><ColorField label="起始色" color={params.primary} onChange={(value) => updateParam("primary", value)} /><ColorField label="结束色" color={params.secondary} onChange={(value) => updateParam("secondary", value)} /></div><SliderField label="渐变角度" value={params.angle} min={0} max={360} suffix="°" onChange={(value) => updateParam("angle", value)} /></div>}
+          {selectedStyle === "glass" && <><div className="parameter-group"><div className="group-title"><Palette size={15}/><span>玻璃着色</span></div><div className="color-row"><ColorField label="起始色" color={params.primary} onChange={(value) => updateParam("primary", value)} /><ColorField label="结束色" color={params.secondary} onChange={(value) => updateParam("secondary", value)} /></div><SliderField label="渐变角度" value={params.angle} min={0} max={360} suffix="°" onChange={(value) => updateParam("angle", value)} /></div><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>玻璃质感</span></div><SliderField label="材质透明度" value={params.opacity} min={20} max={94} suffix="%" onChange={(value) => updateParam("opacity", value)} /><SliderField label="磨砂模糊" value={params.blur} min={0} max={24} suffix=" px" onChange={(value) => updateParam("blur", value)} /><SliderField label="边缘高光" value={params.highlight} min={0} max={100} suffix="%" onChange={(value) => updateParam("highlight", value)} /></div></>}
+          {selectedStyle === "extrude" && <><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>挤出结构</span></div><SliderField label="挤出厚度" value={params.extrusion} min={4} max={42} suffix=" px" onChange={(value) => updateParam("extrusion", value)} /><SliderField label="挤出角度" value={params.extrusionAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("extrusionAngle", value)} /></div><div className="parameter-group face-color-group"><div className="group-title"><Layers3 size={15}/><span>分面配色</span></div><p>顶面、侧面与正面分别应用独立颜色，挤出厚度与 3D 场景共用逐层结构。</p><div className="face-color-grid"><ColorField label="顶面" color={params.topColor} onChange={(value) => updateParam("topColor", value)} /><ColorField label="侧面" color={params.sideColor} onChange={(value) => updateParam("sideColor", value)} /><ColorField label="正面" color={params.frontColor} onChange={(value) => updateParam("frontColor", value)} /></div></div></>}
+          {selectedStyle === "scene" && <><div className="parameter-group"><div className="group-title"><Palette size={15}/><span>主体颜色</span></div><div className="color-row"><ColorField label="起始色" color={params.primary} onChange={(value) => updateParam("primary", value)} /><ColorField label="结束色" color={params.secondary} onChange={(value) => updateParam("secondary", value)} /></div><SliderField label="渐变角度" value={params.angle} min={0} max={360} suffix="°" onChange={(value) => updateParam("angle", value)} /></div><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>实体与玻璃</span></div><SliderField label="挤出厚度" value={params.extrusion} min={4} max={42} suffix=" px" onChange={(value) => updateParam("extrusion", value)} /><SliderField label="材质透明度" value={params.opacity} min={20} max={94} suffix="%" onChange={(value) => updateParam("opacity", value)} /><SliderField label="磨砂模糊" value={params.blur} min={0} max={24} suffix=" px" onChange={(value) => updateParam("blur", value)} /><SliderField label="边缘高光" value={params.highlight} min={0} max={100} suffix="%" onChange={(value) => updateParam("highlight", value)} /></div><div className="parameter-group scene-assets"><div className="group-title"><Clapperboard size={15}/><span>场景素材</span></div><p>仅作用于「3D 插画场景」。所有素材将对齐同一套等轴透视。</p><button onClick={() => baseInput.current?.click()} className="scene-upload"><span className="scene-swatch base-swatch"/><div><strong>{params.sceneBase ? "已自定义底座" : "默认底座"}</strong><small>上传 SVG / PNG 覆盖</small></div><Upload size={15}/></button><button onClick={() => decorInput.current?.click()} className="scene-upload"><span className="scene-swatch decor-swatch"/><div><strong>{params.sceneDecor ? "已自定义装饰" : "默认周边装饰"}</strong><small>上传 SVG / PNG 覆盖</small></div><Upload size={15}/></button><input ref={baseInput} className="visually-hidden" type="file" accept="image/svg+xml,image/png" onChange={(event) => readSceneAsset(event, "sceneBase")} /><input ref={decorInput} className="visually-hidden" type="file" accept="image/svg+xml,image/png" onChange={(event) => readSceneAsset(event, "sceneDecor")} /></div></>}
           <div className="export-panel"><div className="export-head"><div><span className="eyebrow">E / 导出产物</span><h2>准备下载</h2></div><FileImage size={19}/></div><div className="format-options"><button onClick={() => setFormats((current) => current.includes("svg") ? current.filter((format) => format !== "svg") : [...current, "svg"])} className={formats.includes("svg") ? "format-option format-selected" : "format-option"}><span className="format-check">{formats.includes("svg") && <Check size={12}/>}</span><div><strong>可编辑 SVG</strong><small>保留轮廓与可编辑路径</small></div></button><button onClick={() => setFormats((current) => current.includes("png") ? current.filter((format) => format !== "png") : [...current, "png"])} className={formats.includes("png") ? "format-option format-selected" : "format-option"}><span className="format-check">{formats.includes("png") && <Check size={12}/>}</span><div><strong>透明底 PNG</strong><small>保留完整光影与玻璃质感</small></div></button></div><div className="resolution-row"><span>PNG 分辨率</span><div>{[2,3,4].map((value) => <button key={value} onClick={() => setResolution(value)} className={resolution === value ? "resolution-active" : ""}>{value}×</button>)}</div></div><p className="export-tip"><Sparkles size={14}/> 3D 与复杂玻璃效果导出 SVG 时会简化部分光影，想保留完整质感建议输出 PNG。</p><Button disabled={isExporting} onClick={exportBundle} className="bundle-button">{isExporting ? <RefreshCw className="spin-icon" size={16}/> : <ArrowDownToLine size={16}/>} {isExporting ? "正在打包…" : `打包下载 ${isBatch ? "批量结果" : "已选结果"}`}</Button>{exportNote && <p className="export-note"><Check size={13}/>{exportNote}</p>}</div>
         </aside>
       </main>

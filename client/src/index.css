@@ -67,3 +67,6 @@
 .face-color-group > p { margin: -4px 0 11px; color: #879598; font-size: 9px; line-height: 1.55; }.face-color-grid { display: grid; grid-template-columns: 1fr; gap: 7px; }.face-color-grid label { display: grid; grid-template-columns: 31px 1fr; align-items: center; gap: 8px; }.face-color-grid label > span { color: #78888B; font-size: 9px; }.face-color-grid .color-input { width: 100%; }
 @media (max-width: 1030px) { .source-card .style-library-inline { grid-column: 1/-1; }.style-library-inline .style-rail { grid-template-columns: repeat(3,minmax(0,1fr)); } }
 @media (max-width: 720px) { .style-library-inline .style-rail { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+
+/* 当前模板只公开必要参数；颜色字段可复用于双色、渐变、玻璃、2.5D 与场景主体。 */
+.color-field { display: block; min-width: 0; }.color-field > span { display: block; margin-bottom: 5px; color: #78888B; font-size: 9px; }.face-color-grid .color-field { display: grid; grid-template-columns: 31px 1fr; align-items: center; gap: 8px; }.face-color-grid .color-field > span { margin: 0; }.face-color-grid .color-input { width: 100%; }
