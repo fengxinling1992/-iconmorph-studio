@@ -86,9 +86,20 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const front = escapeXml(params.frontColor);
   const extrusion = Math.max(2, params.extrusion);
   const crop = `0 0 ${size} ${size}`;
+  const [sourceX = 0, sourceY = 0, sourceWidth = 24, sourceHeight = 24] = viewBox.split(/[\s,]+/).map(Number);
+  const wholeGradient = (id: string) => {
+    const x1 = sourceX + ((100 - Number(gradient.x)) / 100) * sourceWidth;
+    const y1 = sourceY + ((100 - Number(gradient.y)) / 100) * sourceHeight;
+    const x2 = sourceX + (Number(gradient.x) / 100) * sourceWidth;
+    const y2 = sourceY + (Number(gradient.y) / 100) * sourceHeight;
+    return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${x1.toFixed(3)}" y1="${y1.toFixed(3)}" x2="${x2.toFixed(3)}" y2="${y2.toFixed(3)}"><stop offset="0%" stop-color="${p}"/><stop offset="100%" stop-color="${s}"/></linearGradient>`;
+  };
   const iconFrame = (x: number, y: number, width: number, height = width) => `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet">${content}</svg>`;
+  const gradientFrame = (x: number, y: number, width: number, height: number, gradientId: string) => `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><defs>${wholeGradient(gradientId)}</defs><g fill="url(#${gradientId})">${content}</g></svg>`;
   const current = iconFrame(52, 52, 216);
   const sceneCurrent = iconFrame(70, 62, 180);
+  const gradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-main`);
+  const gradientSceneCurrent = gradientFrame(70, 62, 180, 180, `whole-${uid}-scene`);
   const createExtrusionLayers = (originX: number, originY: number, width: number, shiftScale: number, color: string, angle: number) => {
     const count = Math.max(4, Math.round(extrusion / 2));
     const radians = (angle * Math.PI) / 180;
@@ -106,7 +117,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const decor = params.sceneDecor
     ? `<image href="${escapeXml(params.sceneDecor)}" x="0" y="0" width="${size}" height="${size}" preserveAspectRatio="xMidYMid slice" opacity=".48"/>`
     : `<circle cx="276" cy="72" r="18" fill="${s}" opacity=".72"/><path d="M236 225h38v8h-38z" fill="${p}" opacity=".3"/>`;
-  const defs = `<defs><linearGradient id="grad-${uid}" x1="${100 - Number(gradient.x)}%" y1="${100 - Number(gradient.y)}%" x2="${gradient.x}%" y2="${gradient.y}%"><stop offset="0%" stop-color="${p}"/><stop offset="100%" stop-color="${s}"/></linearGradient><filter id="soft-${uid}" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${Math.max(0.4, params.blur / 16).toFixed(2)}"/></filter><filter id="lift-${uid}" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="${Math.max(2, extrusion / 3)}" stdDeviation="${Math.max(2, extrusion / 2)}" flood-color="#1F3441" flood-opacity=".18"/></filter><filter id="glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.blur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 ${Math.min(.72, params.opacity / 130)} 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  const defs = `<defs><filter id="soft-${uid}" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${Math.max(0.4, params.blur / 16).toFixed(2)}"/></filter><filter id="lift-${uid}" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="${Math.max(2, extrusion / 3)}" stdDeviation="${Math.max(2, extrusion / 2)}" flood-color="#1F3441" flood-opacity=".18"/></filter><filter id="glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.blur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 ${Math.min(.72, params.opacity / 130)} 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
   let artwork = "";
 
   if (style === "duotone") {
@@ -114,10 +125,10 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g transform="translate(${layerDistance.toFixed(1)} ${layerDistance.toFixed(1)})" fill="${s}">${current}</g><g fill="${p}" filter="url(#lift-${uid})">${current}</g>`;
   }
   if (style === "gradient") {
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g fill="url(#grad-${uid})">${current}</g>`;
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${gradientCurrent}`;
   }
   if (style === "glass") {
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g transform="translate(5 7)" fill="#173746" opacity=".12" filter="url(#soft-${uid})">${current}</g><g fill="url(#grad-${uid})" opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${current}</g><g fill="none" stroke="white" stroke-width="2.5" opacity="${(params.highlight / 140).toFixed(2)}">${current}</g>`;
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g transform="translate(5 7)" fill="#173746" opacity=".12" filter="url(#soft-${uid})">${current}</g><g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientCurrent}</g><g fill="none" stroke="white" stroke-width="2.5" opacity="${(params.highlight / 140).toFixed(2)}">${current}</g>`;
   }
   if (style === "extrude") {
     const depthLayers = createExtrusionLayers(52, 52, 216, 1, side, params.extrusionAngle);
@@ -129,7 +140,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   }
   if (style === "scene") {
     const depthLayers = createExtrusionLayers(70, 62, 180, .55, side, 55);
-    artwork = `${baseVisual}<rect x="24" y="28" width="272" height="264" rx="26" fill="#F8F6F0" opacity=".24"/>${decor}<ellipse cx="164" cy="237" rx="87" ry="25" fill="#15313C" opacity=".14" filter="url(#soft-${uid})"/>${depthLayers}<g fill="url(#grad-${uid})" opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${sceneCurrent}</g><g fill="none" stroke="white" stroke-width=".32" opacity="${(params.highlight / 150).toFixed(2)}">${sceneCurrent}</g><path d="M49 250L164 287L276 236" fill="none" stroke="white" stroke-opacity=".64"/>`;
+    artwork = `${baseVisual}<rect x="24" y="28" width="272" height="264" rx="26" fill="#F8F6F0" opacity=".24"/>${decor}<ellipse cx="164" cy="237" rx="87" ry="25" fill="#15313C" opacity=".14" filter="url(#soft-${uid})"/>${depthLayers}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g><g fill="none" stroke="white" stroke-width=".32" opacity="${(params.highlight / 150).toFixed(2)}">${sceneCurrent}</g><path d="M49 250L164 287L276 236" fill="none" stroke="white" stroke-opacity=".64"/>`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
 }

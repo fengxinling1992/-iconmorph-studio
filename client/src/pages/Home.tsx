@@ -84,10 +84,15 @@ async function svgToPng(svg: string, resolution: number) {
 }
 
 function SliderField({ label, value, min, max, step = 1, suffix = "", onChange }: { label: string; value: number; min: number; max: number; step?: number; suffix?: string; onChange: (value: number) => void }) {
+  const setNumericValue = (rawValue: string) => {
+    const nextValue = Number(rawValue);
+    if (!Number.isFinite(nextValue)) return;
+    onChange(Math.min(max, Math.max(min, nextValue)));
+  };
   return (
     <div className="parameter-field">
-      <div className="parameter-label"><span>{label}</span><strong>{value}{suffix}</strong></div>
-      <Slider value={[value]} min={min} max={max} step={step} onValueChange={([next]) => onChange(next)} aria-label={label} />
+      <div className="parameter-label"><span>{label}</span><label className="numeric-control"><input aria-label={`${label}数值`} type="number" min={min} max={max} step={step} value={value} onChange={(event) => setNumericValue(event.target.value)} /><em>{suffix}</em></label></div>
+      <div className="slider-hit-area"><Slider value={[value]} min={min} max={max} step={step} onValueChange={([next]) => onChange(next)} aria-label={label} /></div>
     </div>
   );
 }
