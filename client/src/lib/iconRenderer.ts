@@ -111,16 +111,18 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
       const ratio = index / steps;
       return maskFrame(originX + offsetX * ratio, originY + offsetY * ratio);
     }).join("");
-    // 以正面右下转角作为接缝起点；终点沿当前挤出向量延展。
-    // 底面使用该斜线的动态半平面裁切，因此角度改变时接缝也会同步旋转。
-    const seamStart = { x: originX + width * .82, y: originY + width * .82 };
-    const seamEnd = { x: seamStart.x + offsetX, y: seamStart.y + offsetY };
-    const vectorLength = Math.hypot(offsetX, offsetY) || 1;
-    const normalX = -offsetY / vectorLength;
-    const normalY = offsetX / vectorLength;
-    const extension = size * 4;
-    const bottomPath = `M${seamStart.x.toFixed(2)} ${seamStart.y.toFixed(2)}L${seamEnd.x.toFixed(2)} ${seamEnd.y.toFixed(2)}L${(seamEnd.x + normalX * extension).toFixed(2)} ${(seamEnd.y + normalY * extension).toFixed(2)}L${(seamStart.x + normalX * extension).toFixed(2)} ${(seamStart.y + normalY * extension).toFixed(2)}Z`;
-    return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><rect width="${size}" height="${size}" fill="${side}"/><path d="${bottomPath}" fill="${bottom}"/></g>`;
+    // 侧面和底面由同一闭合外壳承载。两块局部四边形仅覆盖真实外露的挤出带，
+    // 并在「正面右下角 → 挤出后右下角」这条随角度旋转的斜线上相接。
+    const leftBottom = { x: originX + width * .18, y: originY + width * .82 };
+    const rightBottom = { x: originX + width * .82, y: originY + width * .82 };
+    const rightTop = { x: originX + width * .82, y: originY + width * .18 };
+    const extendedLeftBottom = { x: leftBottom.x + offsetX, y: leftBottom.y + offsetY };
+    const extendedRightBottom = { x: rightBottom.x + offsetX, y: rightBottom.y + offsetY };
+    const extendedRightTop = { x: rightTop.x + offsetX, y: rightTop.y + offsetY };
+    const point = (target: { x: number; y: number }) => `${target.x.toFixed(2)} ${target.y.toFixed(2)}`;
+    const bottomPath = `M${point(leftBottom)}L${point(rightBottom)}L${point(extendedRightBottom)}L${point(extendedLeftBottom)}Z`;
+    const sidePath = `M${point(rightTop)}L${point(rightBottom)}L${point(extendedRightBottom)}L${point(extendedRightTop)}Z`;
+    return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><path d="${sidePath}" fill="${side}"/><path d="${bottomPath}" fill="${bottom}"/></g>`;
   };
   const baseVisual = params.sceneBase
     ? `<image href="${escapeXml(params.sceneBase)}" x="0" y="0" width="${size}" height="${size}" preserveAspectRatio="xMidYMid slice" opacity=".92"/>`
