@@ -24,6 +24,14 @@ export type RenderParams = {
   sceneExtrusion: number;
   sceneExtrusionAngle: number;
   sceneSkewAngle: number;
+  scenePrimary: string;
+  sceneSecondary: string;
+  sceneAngle: number;
+  sceneSideColor: string;
+  sceneBottomColor: string;
+  sceneBlur: number;
+  sceneHighlight: number;
+  sceneSafeExtrusion: boolean;
   sceneObjectHeight: number;
   sceneMotionHeight: number;
   sceneObjectDecor: "none" | "orb" | "cube";
@@ -95,8 +103,9 @@ function getVisibleBounds(sourceKey: string, viewBox: string, content: string, f
   }
 }
 
-function getSvgContours(sourceKey: string, viewBox: string, content: string): SvgContour[] {
-  const cached = contourCache.get(sourceKey);
+function getSvgContours(sourceKey: string, viewBox: string, content: string, outerOnly = false): SvgContour[] {
+  const cacheKey = `${sourceKey}:${outerOnly ? "outer" : "all"}`;
+  const cached = contourCache.get(cacheKey);
   if (cached) return cached;
   if (typeof document === "undefined" || !document.body) return [];
   const measurementSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -109,6 +118,16 @@ function getSvgContours(sourceKey: string, viewBox: string, content: string): Sv
   try {
     const nodes = Array.from(measurementGroup.querySelectorAll("path,rect,circle,ellipse,polygon,polyline,line"));
     const contours = nodes.flatMap((node) => {
+      const inheritedFill = (() => {
+        let current: Element | null = node;
+        while (current && current !== measurementGroup) {
+          const fill = (current.getAttribute("fill") || current.getAttribute("style")?.match(/fill\s*:\s*([^;]+)/i)?.[1] || "").trim().toLowerCase();
+          if (fill) return fill;
+          current = current.parentElement;
+        }
+        return "";
+      })();
+      if (outerOnly && ["#fff", "#ffffff", "white", "#f7f4ee"].includes(inheritedFill)) return [];
       const geometry = node as SVGGeometryElement;
       if (typeof geometry.getTotalLength !== "function" || typeof geometry.getPointAtLength !== "function") return [];
       const length = geometry.getTotalLength();
@@ -122,7 +141,7 @@ function getSvgContours(sourceKey: string, viewBox: string, content: string): Sv
       });
       return points.length > 1 ? [{ points, closed }] : [];
     });
-    contourCache.set(sourceKey, contours);
+    contourCache.set(cacheKey, contours);
     return contours;
   } catch {
     return [];
@@ -176,34 +195,40 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const { viewBox, content } = safeSvg(asset.svg);
   const uid = `${asset.id.replace(/[^a-zA-Z0-9]/g, "")}-${style}`;
   const gradient = gradientAngle(params.angle);
+  const sceneGradient = gradientAngle(params.sceneAngle);
   const p = escapeXml(params.primary);
   const s = escapeXml(params.secondary);
   const side = escapeXml(params.sideColor);
   const bottom = escapeXml(params.bottomColor);
   const front = escapeXml(params.frontColor);
+  const scenePrimary = escapeXml(params.scenePrimary);
+  const sceneSecondary = escapeXml(params.sceneSecondary);
+  const sceneSide = escapeXml(params.sceneSideColor);
+  const sceneBottom = escapeXml(params.sceneBottomColor);
   const requestedExtrusion = Math.max(2, params.extrusion);
   const requestedSceneExtrusion = Math.max(2, params.sceneExtrusion);
   const extrusionSafety = getExtrusionSafetyInfo(asset, requestedExtrusion);
   const sceneExtrusionSafety = getExtrusionSafetyInfo(asset, requestedSceneExtrusion);
   const extrusion = params.safeExtrusion ? extrusionSafety.recommendedThickness : requestedExtrusion;
-  const sceneExtrusion = params.safeExtrusion ? sceneExtrusionSafety.recommendedThickness : requestedSceneExtrusion;
+  const sceneExtrusion = params.sceneSafeExtrusion ? sceneExtrusionSafety.recommendedThickness : requestedSceneExtrusion;
   const [sourceX = 0, sourceY = 0, sourceWidth = 24, sourceHeight = 24] = viewBox.split(/[\s,]+/).map(Number);
   const sourceContours = getSvgContours(asset.svg, viewBox, content);
-  const wholeGradient = (id: string) => {
-    const x1 = sourceX + ((100 - Number(gradient.x)) / 100) * sourceWidth;
-    const y1 = sourceY + ((100 - Number(gradient.y)) / 100) * sourceHeight;
-    const x2 = sourceX + (Number(gradient.x) / 100) * sourceWidth;
-    const y2 = sourceY + (Number(gradient.y) / 100) * sourceHeight;
-    return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${x1.toFixed(3)}" y1="${y1.toFixed(3)}" x2="${x2.toFixed(3)}" y2="${y2.toFixed(3)}"><stop offset="0%" stop-color="${p}"/><stop offset="100%" stop-color="${s}"/></linearGradient>`;
+  const sceneOuterContours = getSvgContours(asset.svg, viewBox, content, true);
+  const wholeGradient = (id: string, start = p, end = s, direction = gradient) => {
+    const x1 = sourceX + ((100 - Number(direction.x)) / 100) * sourceWidth;
+    const y1 = sourceY + ((100 - Number(direction.y)) / 100) * sourceHeight;
+    const x2 = sourceX + (Number(direction.x) / 100) * sourceWidth;
+    const y2 = sourceY + (Number(direction.y) / 100) * sourceHeight;
+    return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${x1.toFixed(3)}" y1="${y1.toFixed(3)}" x2="${x2.toFixed(3)}" y2="${y2.toFixed(3)}"><stop offset="0%" stop-color="${start}"/><stop offset="100%" stop-color="${end}"/></linearGradient>`;
   };
   const iconFrame = (x: number, y: number, width: number, height = width) => `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet">${content}</svg>`;
   const colorizedFrame = (x: number, y: number, width: number, height: number, color: string, label: string) => {
     const paintClass = `paint-${uid}-${label}`;
     return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><style>.${paintClass} *{fill:${color}!important}.${paintClass} [fill="none"]{fill:none!important;stroke:${color}!important}.${paintClass} [stroke]{stroke:${color}!important}.${paintClass} [fill="#fff"],.${paintClass} [fill="#ffffff"],.${paintClass} [fill="white"],.${paintClass} [fill="#F7F4EE"]{fill:#F7F4EE!important}</style><g class="${paintClass}">${content}</g></svg>`;
   };
-  const gradientFrame = (x: number, y: number, width: number, height: number, gradientId: string) => {
+  const gradientFrame = (x: number, y: number, width: number, height: number, gradientId: string, start = p, end = s, direction = gradient, cutoutColor = "#F7F4EE") => {
     const paintClass = `gradient-${uid}-${gradientId}`;
-    return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><defs>${wholeGradient(gradientId)}</defs><style>.${paintClass} *{fill:url(#${gradientId})!important}.${paintClass} [fill="none"]{fill:none!important;stroke:url(#${gradientId})!important}.${paintClass} [stroke]{stroke:url(#${gradientId})!important}.${paintClass} [fill="#fff"],.${paintClass} [fill="#ffffff"],.${paintClass} [fill="white"],.${paintClass} [fill="#F7F4EE"]{fill:#F7F4EE!important}</style><g class="${paintClass}">${content}</g></svg>`;
+    return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><defs>${wholeGradient(gradientId, start, end, direction)}</defs><style>.${paintClass} *{fill:url(#${gradientId})!important}.${paintClass} [fill="none"]{fill:none!important;stroke:url(#${gradientId})!important}.${paintClass} [stroke]{stroke:url(#${gradientId})!important}.${paintClass} [fill="#fff"],.${paintClass} [fill="#ffffff"],.${paintClass} [fill="white"],.${paintClass} [fill="#F7F4EE"]{fill:${cutoutColor}!important}</style><g class="${paintClass}">${content}</g></svg>`;
   };
   const current = colorizedFrame(52, 52, 216, 216, front, "front");
   const sceneCurrent = colorizedFrame(70, 62, 180, 180, front, "scene-front");
@@ -228,10 +253,12 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   ))) : 0;
   const crop = style === "scene" ? `${-sceneCropPadding} ${-sceneCropPadding} ${320 + sceneCropPadding * 2} ${320 + sceneCropPadding * 2}` : `0 0 ${size} ${size}`;
   const decorLift = Math.min(76, Math.max(7, sceneExtrusion * .42));
-  const gradientSceneCurrent = gradientFrame(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, sceneOrigin.width, `whole-${uid}-scene`);
+  const gradientSceneCurrent = gradientFrame(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, sceneOrigin.width, `whole-${uid}-scene`, scenePrimary, sceneSecondary, sceneGradient, "#FFFFFF");
   const sceneIsoTransform = `matrix(1 ${sceneShear} 0 1 0 ${(-sceneShear * sceneRightEdge).toFixed(3)})`;
   const projectedSceneCurrent = `<g transform="${sceneIsoTransform}">${gradientSceneCurrent}</g>`;
-  const createIntegratedExtrusion = (originX: number, originY: number, width: number, shiftScale: number, angle: number, maskKey: string, depth: number, isometric = false) => {
+  const sceneHighlightClass = `scene-highlight-${uid}`;
+  const projectedSceneHighlight = `<g transform="${sceneIsoTransform}"><svg x="${sceneOrigin.x}" y="${sceneOrigin.y}" width="${sceneOrigin.width}" height="${sceneOrigin.width}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><style>.${sceneHighlightClass} *{fill:none!important;stroke:#FFFFFF!important;stroke-width:2.1!important}</style><g class="${sceneHighlightClass}" opacity="${(params.sceneHighlight / 175).toFixed(2)}">${content}</g></svg></g>`;
+  const createIntegratedExtrusion = (originX: number, originY: number, width: number, shiftScale: number, angle: number, maskKey: string, depth: number, isometric = false, primaryFaceColor = side, secondaryFaceColor = bottom, contours = sourceContours) => {
     // 标准等角参考以 30° 为基准：默认右侧和底侧外扩均与水平轴形成 30° 关系。
     const radians = (angle * Math.PI) / 180;
     const shift = depth * shiftScale;
@@ -264,7 +291,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
       return -vertical >= horizontal ? "primary" : "secondary";
     };
     const facePaths = { primary: [] as string[], secondary: [] as string[] };
-    sourceContours.forEach((contour) => {
+    contours.forEach((contour) => {
       const mapped = contour.points.map(mapPoint);
       const segmentCount = contour.closed ? mapped.length : Math.max(0, mapped.length - 1);
       const signedArea = contour.closed ? mapped.reduce((area, currentPoint, index) => {
@@ -288,8 +315,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
         }
       });
     });
-    const geometryFaces = `${facePaths.primary.length ? `<path d="${facePaths.primary.join("")}" fill="${side}"/>` : ""}${facePaths.secondary.length ? `<path d="${facePaths.secondary.join("")}" fill="${bottom}"/>` : ""}`;
-    const fallback = `<g fill="${side}">${iconFrame(originX + offsetX, originY + offsetY, width)}</g>`;
+    const geometryFaces = `${facePaths.primary.length ? `<path d="${facePaths.primary.join("")}" fill="${primaryFaceColor}"/>` : ""}${facePaths.secondary.length ? `<path d="${facePaths.secondary.join("")}" fill="${secondaryFaceColor}"/>` : ""}`;
+    const fallback = `<g fill="${primaryFaceColor}">${iconFrame(originX + offsetX, originY + offsetY, width)}</g>`;
     return geometryFaces || fallback;
   };
   const sceneBase = params.sceneBase || "/manus-storage/scene-base_62b9c12e.svg";
@@ -312,7 +339,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     ? `<image href="${escapeXml(params.sceneDecor)}" x="10" y="${(36 - params.sceneMotionHeight).toFixed(1)}" width="300" height="220" preserveAspectRatio="xMidYMid meet"/>`
     : defaultDecorBehind;
   const sceneDecorFront = params.sceneDecor ? "" : defaultDecorFront;
-  const defs = `<defs><filter id="soft-${uid}" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${Math.max(0.4, params.blur / 16).toFixed(2)}"/></filter><filter id="lift-${uid}" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="${Math.max(2, extrusion / 3)}" stdDeviation="${Math.max(2, extrusion / 2)}" flood-color="#1F3441" flood-opacity=".18"/></filter><filter id="glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.blur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 ${Math.min(.72, params.opacity / 130)} 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  const defs = `<defs><filter id="soft-${uid}" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${Math.max(0.4, params.blur / 16).toFixed(2)}"/></filter><filter id="lift-${uid}" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="${Math.max(2, extrusion / 3)}" stdDeviation="${Math.max(2, extrusion / 2)}" flood-color="#1F3441" flood-opacity=".18"/></filter><filter id="glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.blur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 ${Math.min(.72, params.opacity / 130)} 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="scene-glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.sceneBlur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 .72 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
   let artwork = "";
 
   if (style === "duotone") {
@@ -330,8 +357,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${integratedExtrusion}<g filter="url(#lift-${uid})">${current}</g>`;
   }
   if (style === "scene") {
-    const integratedExtrusion = createIntegratedExtrusion(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, .55, params.sceneExtrusionAngle, `volume-${uid}`, sceneExtrusion, true);
-    artwork = `${baseVisual}${sceneDecorBehind}${integratedExtrusion}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${projectedSceneCurrent}</g>${sceneDecorFront}`;
+    const integratedExtrusion = createIntegratedExtrusion(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, .55, params.sceneExtrusionAngle, `volume-${uid}`, sceneExtrusion, true, sceneSide, sceneBottom, sceneOuterContours);
+    artwork = `${baseVisual}${sceneDecorBehind}${integratedExtrusion}<g filter="url(#scene-glow-${uid})">${projectedSceneCurrent}</g>${projectedSceneHighlight}${sceneDecorFront}`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
 }
