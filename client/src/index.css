@@ -120,3 +120,7 @@
 .export-head > svg { color: #FF9A84; }
 .bundle-button { background: var(--refraction-coral); color: #fff; box-shadow: 0 7px 15px rgba(240,122,95,.2); }
 .bundle-button:hover { background: #FF927B; }
+
+/* 3D 插画卡只展示真实底座、主体与已选装饰，不叠加界面级的材质背景。 */
+.variant-card-scene::before, .variant-card-scene::after { display: none; }
+.variant-card-scene .variant-art-compact { padding: 0; background: transparent; box-shadow: none; }
