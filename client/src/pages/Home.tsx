@@ -310,7 +310,7 @@ export default function Home() {
       <header className="topbar">
         <div className="brand-lockup">
           <img src="/manus-storage/iconmorph-mark_cff258a8.png" alt="" className="brand-mark" />
-          <div><p className="brand-name">IconMorph</p><p className="brand-subtitle">SVG LAB</p></div>
+          <div><p className="brand-name">IconMorph <span className="brand-tool-name">SVG图标风格化工具</span></p></div>
         </div>
         <div className="topbar-middle" aria-hidden="true" />
         <div className="topbar-actions">
@@ -322,7 +322,7 @@ export default function Home() {
 
       <main className="workspace">
         <aside className="asset-rail">
-          <div className="rail-head"><div><span className="eyebrow">A / 资产库</span><h2>SVG 组件库</h2></div><button className="icon-button" onClick={() => assetInput.current?.click()} aria-label="上传 SVG"><Plus size={17} /></button></div>
+          <div className="rail-head"><div><span className="eyebrow">A / 资产库</span><h2>SVG 组件库</h2></div></div>
           <button className="library-import" onClick={() => assetInput.current?.click()}><Upload size={17}/><span>上传图标</span><small>支持多选</small></button>
           <div className="library-search"><Search size={14}/><input value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="搜索图标名称或编码" aria-label="搜索图标库" /><button type="button" onClick={() => setLibrarySearch("")} aria-label="清空搜索">{librarySearch ? "×" : ""}</button></div>
           <div className="library-label"><span>{librarySearch ? "搜索结果" : "图标库分组"}</span><span>{visibleLibraryIcons.length || assets.length}</span></div>
@@ -331,17 +331,17 @@ export default function Home() {
         </aside>
 
         <section className="canvas-column">
-          <div className="canvas-header"><div><span className="eyebrow">B / 生成预览</span><h1>SVG风格化实验室</h1><p>每个变体均由当前 SVG 路径实时生成，不使用垫图或导出后再编辑。</p></div><Button variant="outline" className="regenerate" onClick={() => { setParams({ ...params }); setExportNote("已按当前参数刷新全部预览"); }}><RefreshCw size={15}/> 基于当前参数重新生成</Button></div>
+          <div className="canvas-header"><div><span className="eyebrow">B / 生成预览</span><h1>SVG风格化实验室</h1><p>每个变体均由当前 SVG 路径实时生成，不使用垫图或导出后再编辑。</p></div></div>
 
           <div className={compareMode ? "preview-board compare-open" : "preview-board"}>
             <article className="source-card">
               <div className="card-kicker"><span>SOURCE / 01</span><button aria-label="更多源图操作"><Settings2 size={15}/></button></div>
               <SourcePreview asset={activeAsset} />
-              <div className="source-caption"><div><strong>{activeAsset.name}.svg</strong><span>统一 100 × 100 画布，轮廓完整适配</span></div><span className="file-chip">SVG</span></div>
+              <div className="source-caption"><div><strong>{activeAsset.name}.svg</strong></div><span className="file-chip">SVG</span></div>
               <section className="style-library style-library-inline"><div className="inline-library-head"><span className="eyebrow">风格模板</span><span>{styleCatalog.length}</span></div><div className="style-rail">{styleCatalog.map((style) => <button key={style.id} onClick={() => setSelectedStyle(style.id)} className={`template-chip template-${style.id} ${style.id === selectedStyle ? "template-chip-active" : ""}`}><span>{style.index}</span><div><strong>{style.name}</strong><small>{style.id === selectedStyle ? "当前编辑" : style.suggestion}</small></div>{style.id === selectedStyle && <Check size={14}/>}</button>)}</div></section>
             </article>
             <div className="variant-zone">
-              <div className="variant-zone-head"><div><span className="eyebrow">{styleCatalog.length} 个材料变体</span><strong>点击标本以载入参数</strong></div></div>
+              <div className="variant-zone-head"><div><strong>风格选择</strong></div></div>
               <div className="variant-grid">
                 {styleCatalog.map((style) => <article key={style.id} className={`variant-card variant-card-${style.id} ${selectedStyle === style.id ? "variant-card-selected" : ""}`} onClick={() => setSelectedStyle(style.id)}>
                   <div className="variant-meta"><span>{style.index}</span><Checkbox checked={selectedVariants.includes(style.id)} onCheckedChange={() => toggleVariant(style.id)} onClick={(event) => event.stopPropagation()} aria-label={`选择${style.name}导出`} /></div>
