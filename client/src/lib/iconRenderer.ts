@@ -21,6 +21,8 @@ export type RenderParams = {
   blur: number;
   highlight: number;
   safeExtrusion: boolean;
+  sceneObjectDecor: "orb" | "cube";
+  sceneMotionDecor: "ribbon" | "orbit";
   sceneBase?: string;
   sceneDecor?: string;
 };
@@ -203,7 +205,9 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const darkOffset = colorizedFrame(57, 59, 216, 216, "#173746", "glass-shadow");
   const gradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-main`);
   const gradientSceneCurrent = gradientFrame(70, 62, 180, 180, `whole-${uid}-scene`);
-  const createIntegratedExtrusion = (originX: number, originY: number, width: number, shiftScale: number, angle: number, maskKey: string) => {
+  const sceneIsoTransform = "translate(160 152) matrix(0.7071 0.4082 -0.7071 0.4082 0 0) translate(-160 -152)";
+  const projectedSceneCurrent = `<g transform="${sceneIsoTransform}">${gradientSceneCurrent}</g>`;
+  const createIntegratedExtrusion = (originX: number, originY: number, width: number, shiftScale: number, angle: number, maskKey: string, isometric = false) => {
     // 标准等角参考以 30° 为基准：默认右侧和底侧外扩均与水平轴形成 30° 关系。
     const radians = (angle * Math.PI) / 180;
     const shift = extrusion * shiftScale;
@@ -218,7 +222,16 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
         : normalizedAngle < 270
         ? ["left", "top"]
           : ["top", "right"];
-    const mapPoint = (point: ContourPoint) => ({ x: originX + ((point.x - sourceX) / sourceWidth) * width, y: originY + ((point.y - sourceY) / sourceHeight) * width });
+    const mapPoint = (point: ContourPoint) => {
+      const x = originX + ((point.x - sourceX) / sourceWidth) * width;
+      const y = originY + ((point.y - sourceY) / sourceHeight) * width;
+      if (!isometric) return { x, y };
+      const centerX = originX + width / 2;
+      const centerY = originY + width / 2;
+      const localX = x - centerX;
+      const localY = y - centerY;
+      return { x: centerX + .7071 * localX - .7071 * localY, y: centerY + .4082 * localX + .4082 * localY };
+    };
     const contourCenter = { x: originX + width / 2, y: originY + width / 2 };
     const point = (target: ContourPoint) => `${target.x.toFixed(2)} ${target.y.toFixed(2)}`;
     const faceBucketForSegment = (midpoint: ContourPoint) => {
@@ -260,8 +273,17 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   };
   const sceneBase = params.sceneBase || "/manus-storage/scene-base_62b9c12e.svg";
   const baseVisual = `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
-  const defaultDecorBehind = `<image href="/manus-storage/orbit_2a9dae30.png" x="4" y="43" width="312" height="160" preserveAspectRatio="xMidYMid meet" opacity=".88"/><image href="/manus-storage/ribbon_394fae47.png" x="18" y="42" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/><image href="/manus-storage/accent-cube_cb8409c6.png" x="36" y="105" width="58" height="63" preserveAspectRatio="xMidYMid meet"/>`;
-  const defaultDecorFront = `<image href="/manus-storage/glass-orb_3c311794.png" x="246" y="54" width="48" height="48" preserveAspectRatio="xMidYMid meet"/>`;
+  const motionDecor = params.sceneMotionDecor === "orbit"
+    ? `<image href="/manus-storage/orbit_2a9dae30.png" x="4" y="43" width="312" height="160" preserveAspectRatio="xMidYMid meet" opacity=".88"/>`
+    : `<image href="/manus-storage/ribbon_394fae47.png" x="18" y="42" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`;
+  const objectDecorBehind = params.sceneObjectDecor === "cube"
+    ? `<image href="/manus-storage/accent-cube_cb8409c6.png" x="36" y="105" width="58" height="63" preserveAspectRatio="xMidYMid meet"/>`
+    : "";
+  const objectDecorFront = params.sceneObjectDecor === "orb"
+    ? `<image href="/manus-storage/glass-orb_3c311794.png" x="246" y="54" width="48" height="48" preserveAspectRatio="xMidYMid meet"/>`
+    : "";
+  const defaultDecorBehind = `${motionDecor}${objectDecorBehind}`;
+  const defaultDecorFront = objectDecorFront;
   const sceneDecorBehind = params.sceneDecor
     ? `<image href="${escapeXml(params.sceneDecor)}" x="10" y="36" width="300" height="220" preserveAspectRatio="xMidYMid meet"/>`
     : defaultDecorBehind;
@@ -284,8 +306,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${integratedExtrusion}<g filter="url(#lift-${uid})">${current}</g>`;
   }
   if (style === "scene") {
-    const integratedExtrusion = createIntegratedExtrusion(70, 62, 180, .55, params.extrusionAngle, `volume-${uid}`);
-    artwork = `${baseVisual}${sceneDecorBehind}${integratedExtrusion}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g>${sceneDecorFront}`;
+    const integratedExtrusion = createIntegratedExtrusion(70, 62, 180, .55, params.extrusionAngle, `volume-${uid}`, true);
+    artwork = `${baseVisual}${sceneDecorBehind}${integratedExtrusion}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${projectedSceneCurrent}</g>${sceneDecorFront}`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
 }
