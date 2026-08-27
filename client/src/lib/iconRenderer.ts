@@ -111,8 +111,10 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
       const ratio = index / steps;
       return maskFrame(originX + offsetX * ratio, originY + offsetY * ratio);
     }).join("");
-    const sideStart = Math.max(0, originX + width * .58);
-    const bottomStart = Math.min(size, originY + width * .72);
+    // 将侧面/底面接缝锚定在正面轮廓的右下转角附近：侧面持续覆盖右侧外缘，
+    // 底面只在正面底边之后开始，从而避免在侧面中段出现错误分割。
+    const sideStart = Math.max(0, originX + width * .82);
+    const bottomStart = Math.min(size, originY + width * .82);
     return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><path d="M${sideStart} 0H${size}V${size}H${sideStart}Z" fill="${side}"/><path d="M0 ${bottomStart}H${size}V${size}H0Z" fill="${bottom}"/></g>`;
   };
   const baseVisual = params.sceneBase
