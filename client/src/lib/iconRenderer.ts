@@ -107,28 +107,33 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
       const ratio = index / steps;
       return maskFrame(originX + offsetX * ratio, originY + offsetY * ratio);
     }).join("");
-    // 第二分面随挤出方向在顶部或底部切换：90°–270° 使用顶边，其余使用底边。
-    // 两块局部四边形仅覆盖真实外露的挤出带，并与右侧面共享同一闭合外壳。
+    // 挤出双分面按四个角度象限选择相邻外边：右下、左下、左上、右上。
+    // 两块局部四边形仅覆盖真实外露的挤出带，并在共享转角到挤出终点的斜线上连续衔接。
     const normalizedAngle = ((angle % 360) + 360) % 360;
-    const useTopEdge = normalizedAngle >= 90 && normalizedAngle <= 270;
+    const faces: ["right" | "bottom" | "left" | "top", "right" | "bottom" | "left" | "top"] = normalizedAngle < 90
+      ? ["right", "bottom"]
+      : normalizedAngle < 180
+        ? ["bottom", "left"]
+        : normalizedAngle < 270
+          ? ["left", "top"]
+          : ["top", "right"];
     const leftTop = { x: originX + width * .18, y: originY + width * .18 };
     const leftBottom = { x: originX + width * .18, y: originY + width * .82 };
     const rightBottom = { x: originX + width * .82, y: originY + width * .82 };
     const rightTop = { x: originX + width * .82, y: originY + width * .18 };
     const overlap = Math.max(1.5, Math.min(3, extrusion * .12));
-    const secondLeft = useTopEdge ? leftTop : leftBottom;
-    const secondRight = useTopEdge ? rightTop : rightBottom;
-    const overlapDirection = useTopEdge ? 1 : -1;
-    const secondLeftOverlap = { x: secondLeft.x, y: secondLeft.y + overlap * overlapDirection };
-    const secondRightOverlap = { x: secondRight.x, y: secondRight.y + overlap * overlapDirection };
-    const extendedSecondLeft = { x: secondLeft.x + offsetX, y: secondLeft.y + offsetY };
-    const extendedSecondRight = { x: secondRight.x + offsetX, y: secondRight.y + offsetY };
+    const extendedLeftTop = { x: leftTop.x + offsetX, y: leftTop.y + offsetY };
+    const extendedLeftBottom = { x: leftBottom.x + offsetX, y: leftBottom.y + offsetY };
     const extendedRightBottom = { x: rightBottom.x + offsetX, y: rightBottom.y + offsetY };
     const extendedRightTop = { x: rightTop.x + offsetX, y: rightTop.y + offsetY };
     const point = (target: { x: number; y: number }) => `${target.x.toFixed(2)} ${target.y.toFixed(2)}`;
-    const secondFacePath = `M${point(secondLeftOverlap)}L${point(secondRightOverlap)}L${point(extendedSecondRight)}L${point(extendedSecondLeft)}Z`;
-    const sidePath = `M${point(rightTop)}L${point(rightBottom)}L${point(extendedRightBottom)}L${point(extendedRightTop)}Z`;
-    return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><path d="${sidePath}" fill="${side}"/><path d="${secondFacePath}" fill="${bottom}"/></g>`;
+    const edgePath = (edge: "right" | "bottom" | "left" | "top") => {
+      if (edge === "right") return `M${point({ x: rightTop.x - overlap, y: rightTop.y })}L${point({ x: rightBottom.x - overlap, y: rightBottom.y })}L${point(extendedRightBottom)}L${point(extendedRightTop)}Z`;
+      if (edge === "bottom") return `M${point({ x: leftBottom.x, y: leftBottom.y - overlap })}L${point({ x: rightBottom.x, y: rightBottom.y - overlap })}L${point(extendedRightBottom)}L${point(extendedLeftBottom)}Z`;
+      if (edge === "left") return `M${point({ x: leftTop.x + overlap, y: leftTop.y })}L${point({ x: leftBottom.x + overlap, y: leftBottom.y })}L${point(extendedLeftBottom)}L${point(extendedLeftTop)}Z`;
+      return `M${point({ x: leftTop.x, y: leftTop.y + overlap })}L${point({ x: rightTop.x, y: rightTop.y + overlap })}L${point(extendedRightTop)}L${point(extendedLeftTop)}Z`;
+    };
+    return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><path d="${edgePath(faces[0])}" fill="${side}"/><path d="${edgePath(faces[1])}" fill="${bottom}"/></g>`;
   };
   const sceneBase = params.sceneBase || "/manus-storage/scene-base_62b9c12e.svg";
   const baseVisual = `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
