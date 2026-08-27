@@ -24,8 +24,8 @@ export type RenderParams = {
   sceneExtrusion: number;
   sceneExtrusionAngle: number;
   sceneSkewAngle: number;
-  sceneObjectDecor: "orb" | "cube";
-  sceneMotionDecor: "ribbon" | "orbit";
+  sceneObjectDecor: "none" | "orb" | "cube";
+  sceneMotionDecor: "none" | "ribbon" | "orbit";
   sceneBase?: string;
   sceneDecor?: string;
 };
@@ -282,13 +282,16 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const baseVisual = `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
   const motionDecor = params.sceneMotionDecor === "orbit"
     ? `<image href="/manus-storage/orbit_2a9dae30.png" x="4" y="${(43 - decorLift * .45).toFixed(1)}" width="312" height="160" preserveAspectRatio="xMidYMid meet" opacity=".88"/>`
-    : `<image href="/manus-storage/ribbon_394fae47.png" x="18" y="${(42 - decorLift * .45).toFixed(1)}" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`;
-  const objectDecorBehind = params.sceneObjectDecor === "cube"
-    ? `<image href="/manus-storage/accent-cube_cb8409c6.png" x="52" y="${(133 - decorLift).toFixed(1)}" width="15" height="16" preserveAspectRatio="xMidYMid meet"/>`
-    : "";
-  const objectDecorFront = params.sceneObjectDecor === "orb"
-    ? `<image href="/manus-storage/glass-orb_3c311794.png" x="256" y="${(85 - decorLift).toFixed(1)}" width="12" height="12" preserveAspectRatio="xMidYMid meet"/>`
-    : "";
+    : params.sceneMotionDecor === "ribbon"
+      ? `<image href="/manus-storage/ribbon_394fae47.png" x="18" y="${(42 - decorLift * .45).toFixed(1)}" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`
+      : "";
+  const accentAsset = params.sceneObjectDecor === "cube" ? "/manus-storage/accent-cube_cb8409c6.png" : "/manus-storage/glass-orb_3c311794.png";
+  const objectDecorBehind = params.sceneObjectDecor === "none"
+    ? ""
+    : `<image href="${accentAsset}" x="49" y="${(132 - decorLift).toFixed(1)}" width="12" height="13" preserveAspectRatio="xMidYMid meet"/>`;
+  const objectDecorFront = params.sceneObjectDecor === "none"
+    ? ""
+    : `<image href="${accentAsset}" x="244" y="${(78 - decorLift).toFixed(1)}" width="28" height="30" preserveAspectRatio="xMidYMid meet"/>`;
   const defaultDecorBehind = `${motionDecor}${objectDecorBehind}`;
   const defaultDecorFront = objectDecorFront;
   const sceneDecorBehind = params.sceneDecor

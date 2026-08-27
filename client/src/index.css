@@ -88,3 +88,35 @@
 
 /* 3D 斜切预设与物件避让：预设保持紧凑，装饰由场景高度逻辑自动移动。 */
 .scene-skew-presets { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 8px; margin: 8px 0 11px; }.scene-skew-presets > span { color: #718586; font-size: 9px; }.scene-skew-presets > div { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; }.scene-skew-presets button { min-height: 27px; border: 1px solid #D8E1DE; background: #FAFCFA; color: #5D7475; font-size: 10px; transition: all .16s cubic-bezier(.23,1,.32,1); }.scene-skew-presets button:hover { border-color: #74CDC4; color: #27666A; }.scene-skew-presets .scene-kit-active { border-color: #18B9A7; background: #E8FAF6; color: #136D66; box-shadow: inset 0 0 0 1px rgba(24,185,167,.08); }
+
+.scene-assets .scene-kit-options { grid-template-columns: repeat(3,1fr); }
+
+/* 材料实验室视觉补强：变体应像可折射的实体标本，索引像可追溯的实验档案；珊瑚色仅用于折射与导出时刻。 */
+:root { --refraction-coral: #F07A5F; --specimen-teal: rgba(22,184,166,.13); }
+.asset-rail, .control-rail { background-image: radial-gradient(circle, rgba(40,86,84,.14) .65px, transparent .8px); background-size: 10px 10px; background-position: 4px 5px; }
+.asset-rail > *, .control-rail > * { position: relative; }
+.canvas-header { padding-top: 31px; padding-bottom: 23px; }
+.canvas-header::before { content: ""; position: absolute; z-index: -1; width: 170px; height: 105px; top: -10px; right: 46px; background: linear-gradient(135deg, rgba(22,184,166,.08) 0 44%, rgba(240,122,95,.22) 45% 49%, rgba(255,255,255,.32) 50% 66%, rgba(22,184,166,.06) 67%); clip-path: polygon(20% 0,100% 0,82% 92%,0 70%); filter: saturate(.8); pointer-events: none; }
+.canvas-header h1 { font-size: clamp(23px,2.35vw,34px); font-weight: 700; letter-spacing: -1.55px; }
+.canvas-header .eyebrow, .variant-zone-head .eyebrow { color: #587B7D; font-weight: 700; }
+.card-kicker, .group-title { position: relative; }
+.card-kicker::after, .group-title::after { content: ""; height: 1px; flex: 1; margin-left: 9px; background: repeating-linear-gradient(90deg, rgba(46,101,98,.3) 0 2px, transparent 2px 6px); }
+.variant-card { overflow: hidden; isolation: isolate; border-color: #D8DED8; box-shadow: 0 1px 0 rgba(255,255,255,.85) inset; }
+.variant-card::before { content: ""; position: absolute; z-index: -1; inset: 25px 8px 42px; background: linear-gradient(136deg, rgba(255,255,255,.74) 0 31%, var(--specimen-teal) 32% 47%, rgba(255,255,255,.18) 48% 62%, rgba(240,122,95,.13) 63% 68%, transparent 69%); border: 1px solid rgba(255,255,255,.76); box-shadow: 7px 8px 14px rgba(41,91,88,.04); clip-path: polygon(8% 0,100% 5%,92% 100%,0 91%); pointer-events: none; }
+.variant-card::after { content: ""; position: absolute; width: 20px; height: 20px; right: -8px; top: -8px; background: linear-gradient(135deg, transparent 0 44%, rgba(240,122,95,.62) 45% 53%, rgba(22,184,166,.42) 54%); transform: rotate(8deg); pointer-events: none; }
+.variant-card > * { position: relative; z-index: 1; }
+.variant-art-compact { padding: 4px; background: linear-gradient(120deg, rgba(255,255,255,.52), rgba(22,184,166,.035) 56%, rgba(240,122,95,.09)); box-shadow: inset 0 1px rgba(255,255,255,.82); }
+.variant-card-selected { border-color: #16B8A6; box-shadow: inset 0 0 0 1px #16B8A6, 0 9px 19px rgba(22,184,166,.13); }
+.variant-card-selected::before { background: linear-gradient(136deg, rgba(255,255,255,.86) 0 28%, rgba(22,184,166,.18) 29% 44%, rgba(255,255,255,.22) 45% 60%, rgba(240,122,95,.18) 61% 67%, transparent 68%); }
+.variant-meta { color: #657E7D; font-weight: 700; }
+.variant-card-footer strong { font-family: "Space Grotesk", "Noto Sans SC", sans-serif; font-size: 11px; letter-spacing: -.12px; }
+.template-chip-active { position: relative; overflow: hidden; background: linear-gradient(112deg, #F4FCF9, #E5F8F2 62%, rgba(240,122,95,.12)); }
+.template-chip-active::after { content: ""; position: absolute; width: 13px; height: 13px; right: -5px; bottom: -5px; background: linear-gradient(135deg, #16B8A6 0 48%, var(--refraction-coral) 49%); transform: rotate(45deg); }
+.template-chip-active > * { position: relative; z-index: 1; }
+.file-chip { position: relative; border-color: #B7D9D2; background: linear-gradient(90deg, rgba(22,184,166,.08), rgba(240,122,95,.11)); font-weight: 700; }
+.export-panel { position: relative; overflow: hidden; border-top: 2px solid var(--refraction-coral); }
+.export-panel::before { content: ""; position: absolute; width: 116px; height: 72px; top: -34px; right: -20px; background: linear-gradient(135deg, rgba(240,122,95,.82), rgba(22,184,166,.2)); clip-path: polygon(30% 0,100% 0,76% 100%,0 62%); opacity: .55; pointer-events: none; }
+.export-panel > * { position: relative; z-index: 1; }
+.export-head > svg { color: #FF9A84; }
+.bundle-button { background: var(--refraction-coral); color: #fff; box-shadow: 0 7px 15px rgba(240,122,95,.2); }
+.bundle-button:hover { background: #FF927B; }
