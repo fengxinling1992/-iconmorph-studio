@@ -117,6 +117,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
         : normalizedAngle < 270
           ? ["left", "top"]
           : ["top", "right"];
+    // 顶边分面以源图形的可见左上、右上外轮廓为锚点，而非包含留白的 viewBox 边界；
+    // 这样可避免轮廓较小的 SVG 从空白区域外扩，仍保持两个顶角同时出发。
     const leftTop = { x: originX + width * .18, y: originY + width * .18 };
     const leftBottom = { x: originX + width * .18, y: originY + width * .82 };
     const rightBottom = { x: originX + width * .82, y: originY + width * .82 };
