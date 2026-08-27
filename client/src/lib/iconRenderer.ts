@@ -66,10 +66,6 @@ function gradientAngle(angle: number) {
   return { x: x.toFixed(1), y: y.toFixed(1) };
 }
 
-function simpleBase() {
-  return `<path d="M33 77L66 59L98 77L66 95Z" fill="#EEE6DA"/><path d="M33 77L66 95V105L33 87Z" fill="#DDD2C2"/><path d="M98 77L66 95V105L98 87Z" fill="#CFC2B0"/>`;
-}
-
 export function normalizedSvgMarkup(asset: IconAsset, fill = "currentColor") {
   const { viewBox, content } = safeSvg(asset.svg);
   return `<svg viewBox="${STANDARD_VIEWBOX}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><svg x="0" y="0" width="100" height="100" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><g fill="${fill}">${content}</g></svg></svg>`;
@@ -127,12 +123,14 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     const sidePath = `M${point(rightTop)}L${point(rightBottom)}L${point(extendedRightBottom)}L${point(extendedRightTop)}Z`;
     return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><path d="${sidePath}" fill="${side}"/><path d="${bottomPath}" fill="${bottom}"/></g>`;
   };
-  const baseVisual = params.sceneBase
-    ? `<image href="${escapeXml(params.sceneBase)}" x="0" y="0" width="${size}" height="${size}" preserveAspectRatio="xMidYMid slice" opacity=".92"/>`
-    : `<image href="/manus-storage/iconmorph-isometric-base_fe785eef.png" x="0" y="0" width="${size}" height="${size}" preserveAspectRatio="xMidYMid slice" opacity=".86"/><rect width="${size}" height="${size}" rx="28" fill="#F7F4EE" opacity=".12"/>${simpleBase()}`;
-  const decor = params.sceneDecor
-    ? `<image href="${escapeXml(params.sceneDecor)}" x="0" y="0" width="${size}" height="${size}" preserveAspectRatio="xMidYMid slice" opacity=".48"/>`
-    : `<circle cx="276" cy="72" r="18" fill="${s}" opacity=".72"/><path d="M236 225h38v8h-38z" fill="${p}" opacity=".3"/>`;
+  const sceneBase = params.sceneBase || "/manus-storage/scene-base_62b9c12e.svg";
+  const baseVisual = `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
+  const defaultDecorBehind = `<image href="/manus-storage/orbit_2a9dae30.png" x="4" y="43" width="312" height="160" preserveAspectRatio="xMidYMid meet" opacity=".88"/><image href="/manus-storage/ribbon_394fae47.png" x="18" y="42" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/><image href="/manus-storage/accent-cube_cb8409c6.png" x="36" y="105" width="58" height="63" preserveAspectRatio="xMidYMid meet"/>`;
+  const defaultDecorFront = `<image href="/manus-storage/glass-orb_3c311794.png" x="246" y="54" width="48" height="48" preserveAspectRatio="xMidYMid meet"/>`;
+  const sceneDecorBehind = params.sceneDecor
+    ? `<image href="${escapeXml(params.sceneDecor)}" x="10" y="36" width="300" height="220" preserveAspectRatio="xMidYMid meet"/>`
+    : defaultDecorBehind;
+  const sceneDecorFront = params.sceneDecor ? "" : defaultDecorFront;
   const defs = `<defs><filter id="soft-${uid}" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${Math.max(0.4, params.blur / 16).toFixed(2)}"/></filter><filter id="lift-${uid}" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="${Math.max(2, extrusion / 3)}" stdDeviation="${Math.max(2, extrusion / 2)}" flood-color="#1F3441" flood-opacity=".18"/></filter><filter id="glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.blur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 ${Math.min(.72, params.opacity / 130)} 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
   let artwork = "";
 
@@ -152,7 +150,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   }
   if (style === "scene") {
     const integratedExtrusion = createIntegratedExtrusion(70, 62, 180, .55, 55, `volume-${uid}`);
-    artwork = `${baseVisual}<rect x="24" y="28" width="272" height="264" rx="26" fill="#F8F6F0" opacity=".24"/>${decor}<ellipse cx="164" cy="237" rx="87" ry="25" fill="#15313C" opacity=".14" filter="url(#soft-${uid})"/>${integratedExtrusion}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g>`;
+    artwork = `${baseVisual}${sceneDecorBehind}${integratedExtrusion}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g>${sceneDecorFront}`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
 }

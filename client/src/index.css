@@ -76,3 +76,6 @@
 
 /* 左侧模板区强化文字层级，便于快速扫读和切换。 */
 .style-library-inline { margin-top: 17px; padding-top: 14px; }.inline-library-head .eyebrow { font-size: 10px; letter-spacing: 1.45px; }.style-library-inline .style-rail { gap: 7px; }.style-library-inline .template-chip { grid-template-columns: 19px 1fr 13px; min-height: 42px; gap: 6px; padding: 7px 8px; }.style-library-inline .template-chip > span { font-size: 10px; }.style-library-inline .template-chip strong { font-size: 11px; line-height: 1.2; }.style-library-inline .template-chip > svg { width: 13px; }
+
+/* 3D 场景默认使用用户提供的底座与五件装饰套件。 */
+.scene-assets .base-swatch { background: #E8EEFF url("/manus-storage/scene-base_62b9c12e.svg") center / 145% auto no-repeat; }.scene-assets .decor-swatch { background: #F1F6FF url("/manus-storage/glass-orb_3c311794.png") center / 78% auto no-repeat; }
