@@ -34,6 +34,8 @@ export const styleCatalog: Array<{ id: StyleId; index: string; name: string; sho
 
 const svgStart = /<svg\b([^>]*)>/i;
 const STANDARD_VIEWBOX = "0 0 100 100";
+type VisibleBounds = { x: number; y: number; width: number; height: number };
+const visibleBoundsCache = new Map<string, VisibleBounds>();
 
 function numericSize(value?: string) {
   const number = Number.parseFloat(value ?? "");
@@ -53,6 +55,32 @@ export function safeSvg(source: string) {
   const viewBox = rawViewBox || `0 0 ${width} ${height}`;
   const content = cleaned.replace(/^[\s\S]*?<svg\b[^>]*>/i, "").replace(/<\/svg>[\s\S]*$/i, "").trim();
   return { viewBox, content, standardViewBox: STANDARD_VIEWBOX };
+}
+
+function getVisibleBounds(sourceKey: string, viewBox: string, content: string, fallback: VisibleBounds): VisibleBounds {
+  const cached = visibleBoundsCache.get(sourceKey);
+  if (cached) return cached;
+  if (typeof document === "undefined" || !document.body) return fallback;
+  const measurementSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const measurementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  measurementSvg.setAttribute("viewBox", viewBox);
+  measurementSvg.setAttribute("aria-hidden", "true");
+  measurementSvg.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;overflow:visible";
+  measurementGroup.innerHTML = content;
+  measurementSvg.appendChild(measurementGroup);
+  document.body.appendChild(measurementSvg);
+  try {
+    const box = measurementGroup.getBBox();
+    const measured = Number.isFinite(box.x) && Number.isFinite(box.y) && box.width > 0 && box.height > 0
+      ? { x: box.x, y: box.y, width: box.width, height: box.height }
+      : fallback;
+    visibleBoundsCache.set(sourceKey, measured);
+    return measured;
+  } catch {
+    return fallback;
+  } finally {
+    measurementSvg.remove();
+  }
 }
 
 function escapeXml(value: string) {
@@ -83,6 +111,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const extrusion = Math.max(2, params.extrusion);
   const crop = `0 0 ${size} ${size}`;
   const [sourceX = 0, sourceY = 0, sourceWidth = 24, sourceHeight = 24] = viewBox.split(/[\s,]+/).map(Number);
+  const sourceBounds = getVisibleBounds(asset.svg, viewBox, content, { x: sourceX, y: sourceY, width: sourceWidth, height: sourceHeight });
   const wholeGradient = (id: string) => {
     const x1 = sourceX + ((100 - Number(gradient.x)) / 100) * sourceWidth;
     const y1 = sourceY + ((100 - Number(gradient.y)) / 100) * sourceHeight;
@@ -117,12 +146,15 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
         : normalizedAngle < 270
           ? ["left", "top"]
           : ["top", "right"];
-    // 顶边分面以源图形的可见左上、右上外轮廓为锚点，而非包含留白的 viewBox 边界；
-    // 这样可避免轮廓较小的 SVG 从空白区域外扩，仍保持两个顶角同时出发。
-    const leftTop = { x: originX + width * .18, y: originY + width * .18 };
-    const leftBottom = { x: originX + width * .18, y: originY + width * .82 };
-    const rightBottom = { x: originX + width * .82, y: originY + width * .82 };
-    const rightTop = { x: originX + width * .82, y: originY + width * .18 };
+    // 使用源 SVG 实际可见轮廓边界映射顶角，而非按 viewBox 比例猜测。
+    const mapSourcePoint = (x: number, y: number) => ({
+      x: originX + ((x - sourceX) / sourceWidth) * width,
+      y: originY + ((y - sourceY) / sourceHeight) * width,
+    });
+    const leftTop = mapSourcePoint(sourceBounds.x, sourceBounds.y);
+    const leftBottom = mapSourcePoint(sourceBounds.x, sourceBounds.y + sourceBounds.height);
+    const rightBottom = mapSourcePoint(sourceBounds.x + sourceBounds.width, sourceBounds.y + sourceBounds.height);
+    const rightTop = mapSourcePoint(sourceBounds.x + sourceBounds.width, sourceBounds.y);
     const overlap = Math.max(1.5, Math.min(3, extrusion * .12));
     const extendedLeftTop = { x: leftTop.x + offsetX, y: leftTop.y + offsetY };
     const extendedLeftBottom = { x: leftBottom.x + offsetX, y: leftBottom.y + offsetY };
