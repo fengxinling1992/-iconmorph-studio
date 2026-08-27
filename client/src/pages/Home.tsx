@@ -21,17 +21,23 @@ import {
   Palette,
   Plus,
   RefreshCw,
+  Search,
   Settings2,
   Sparkles,
   Upload,
   WandSparkles,
   Zap,
 } from "lucide-react";
-import { ChangeEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import JSZip from "jszip";
 import { defaultIcons, getExtrusionSafetyInfo, IconAsset, normalizedSvgMarkup, RenderParams, renderVariantSvg, StyleId, styleCatalog } from "@/lib/iconRenderer";
 
 type OutputFormat = "svg" | "png";
+type LibraryGroup = { id: string; name: string; order: number };
+type LibraryIcon = IconAsset & { groupId: string; code: string };
+type IconLibrary = { groups: LibraryGroup[]; icons: LibraryIcon[] };
+
+const ICON_LIBRARY_URL = "/manus-storage/iconfont-library_a900fc9a.json";
 
 const INITIAL_PARAMS: RenderParams = {
   primary: "#A696FC",
@@ -149,6 +155,10 @@ function VariantPreview({ asset, style, params, compact = false }: { asset: Icon
 export default function Home() {
   const [assets, setAssets] = useState<IconAsset[]>(defaultIcons());
   const [activeId, setActiveId] = useState("archive");
+  const [iconLibrary, setIconLibrary] = useState<IconLibrary>({ groups: [], icons: [] });
+  const [activeLibraryGroup, setActiveLibraryGroup] = useState("");
+  const [librarySearch, setLibrarySearch] = useState("");
+  const [libraryStatus, setLibraryStatus] = useState("正在载入图标库…");
   const [selectedStyle, setSelectedStyle] = useState<StyleId>("extrude");
   const [params, setParams] = useState<RenderParams>(INITIAL_PARAMS);
   const [selectedVariants, setSelectedVariants] = useState<StyleId[]>(() => styleCatalog.map((style) => style.id));
@@ -162,7 +172,36 @@ export default function Home() {
   const baseInput = useRef<HTMLInputElement>(null);
   const decorInput = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch(ICON_LIBRARY_URL)
+      .then((response) => {
+        if (!response.ok) throw new Error("图标库加载失败");
+        return response.json() as Promise<IconLibrary>;
+      })
+      .then((library) => {
+        if (cancelled) return;
+        const firstGroup = library.groups[0]?.id ?? "";
+        const firstIcon = library.icons.find((icon) => icon.groupId === firstGroup) ?? library.icons[0];
+        setIconLibrary(library);
+        setAssets(library.icons);
+        setActiveLibraryGroup(firstGroup);
+        if (firstIcon) setActiveId(firstIcon.id);
+        setLibraryStatus("");
+      })
+      .catch(() => {
+        if (!cancelled) setLibraryStatus("图标库载入失败，已保留内置示例图标。");
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   const activeAsset = useMemo(() => assets.find((asset) => asset.id === activeId) ?? assets[0], [assets, activeId]);
+  const normalizedLibrarySearch = librarySearch.trim().toLocaleLowerCase();
+  const visibleLibraryIcons = useMemo(() => iconLibrary.icons.filter((icon) => {
+    const matchesSearch = !normalizedLibrarySearch || `${icon.name} ${icon.code}`.toLocaleLowerCase().includes(normalizedLibrarySearch);
+    return matchesSearch && (normalizedLibrarySearch || icon.groupId === activeLibraryGroup);
+  }), [iconLibrary.icons, activeLibraryGroup, normalizedLibrarySearch]);
+  const libraryGroupCounts = useMemo(() => new Map(iconLibrary.groups.map((group) => [group.id, iconLibrary.icons.filter((icon) => icon.groupId === group.id).length])), [iconLibrary]);
   const selectedTemplate = styleCatalog.find((style) => style.id === selectedStyle) ?? styleCatalog[0];
   const extrusionSafety = useMemo(() => getExtrusionSafetyInfo(activeAsset, params.extrusion), [activeAsset, params.extrusion]);
   const sceneExtrusionSafety = useMemo(() => getExtrusionSafetyInfo(activeAsset, params.sceneExtrusion), [activeAsset, params.sceneExtrusion]);
@@ -196,6 +235,11 @@ export default function Home() {
       svg: await file.text(),
     }))).then((imported) => {
       setAssets((current) => [...current, ...imported]);
+      setIconLibrary((current) => ({
+        groups: current.groups.some((group) => group.id === "uploaded-assets") ? current.groups : [...current.groups, { id: "uploaded-assets", name: "导入 SVG", order: 999 }],
+        icons: [...current.icons, ...imported.map((asset) => ({ ...asset, groupId: "uploaded-assets", code: "UPLOAD" }))],
+      }));
+      setActiveLibraryGroup("uploaded-assets");
       setActiveId(imported[0].id);
       setIsBatch(imported.length > 1 || isBatch);
       setExportNote(`已载入 ${imported.length} 枚 SVG 源资产`);
@@ -280,15 +324,9 @@ export default function Home() {
         <aside className="asset-rail">
           <div className="rail-head"><div><span className="eyebrow">A / 资产库</span><h2>SVG 组件库</h2></div><button className="icon-button" onClick={() => assetInput.current?.click()} aria-label="上传 SVG"><Plus size={17} /></button></div>
           <button className="library-import" onClick={() => assetInput.current?.click()}><Upload size={17}/><span>上传图标</span><small>支持多选</small></button>
-          <div className="library-label"><span>图标库分组</span><span>{assets.length}</span></div>
-          <div className="library-group"><span>DEFAULT / 01</span><strong>基础组件</strong><small>{assets.length} 枚图标 · 等待载入图标库文件</small></div>
-          <div className="asset-list">
-            {assets.map((asset) => <button key={asset.id} onClick={() => setActiveId(asset.id)} className={`asset-row ${asset.id === activeId ? "asset-row-active" : ""}`}>
-              <span className="asset-thumbnail" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} />
-              <span><strong>{asset.name}</strong><small>SVG · 统一画布</small></span>
-              {asset.id === activeId && <Check size={15} />}
-            </button>)}
-          </div>
+          <div className="library-search"><Search size={14}/><input value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="搜索图标名称或编码" aria-label="搜索图标库" /><button type="button" onClick={() => setLibrarySearch("")} aria-label="清空搜索">{librarySearch ? "×" : ""}</button></div>
+          <div className="library-label"><span>{librarySearch ? "搜索结果" : "图标库分组"}</span><span>{visibleLibraryIcons.length || assets.length}</span></div>
+          {iconLibrary.groups.length > 0 ? <><div className="library-group-tabs" role="tablist" aria-label="图标库分组">{iconLibrary.groups.map((group) => <button key={group.id} role="tab" aria-selected={activeLibraryGroup === group.id} onClick={() => { setActiveLibraryGroup(group.id); setLibrarySearch(""); }} className={activeLibraryGroup === group.id && !librarySearch ? "library-group-active" : ""}><span>{group.name}</span><small>{libraryGroupCounts.get(group.id) ?? 0}</small></button>)}</div><div className="library-icon-grid">{visibleLibraryIcons.map((asset) => <button key={asset.id} title={`${asset.name} · ${asset.code}`} onClick={() => setActiveId(asset.id)} className={`library-icon-card ${asset.id === activeId ? "library-icon-card-active" : ""}`}><span className="library-icon-preview" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} /><strong>{asset.name}</strong></button>)}</div>{!visibleLibraryIcons.length && <p className="library-empty">未找到匹配的图标</p>}</> : <><p className="library-loading">{libraryStatus}</p><div className="asset-list">{assets.map((asset) => <button key={asset.id} onClick={() => setActiveId(asset.id)} className={`asset-row ${asset.id === activeId ? "asset-row-active" : ""}`}><span className="asset-thumbnail" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} /><span><strong>{asset.name}</strong><small>SVG · 统一画布</small></span>{asset.id === activeId && <Check size={15} />}</button>)}</div></>}
           <div className="rail-footer"><span className="status-led"/> 真源模式已开启</div>
         </aside>
 
