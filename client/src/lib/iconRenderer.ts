@@ -10,8 +10,8 @@ export type IconAsset = { id: string; name: string; svg: string };
 export type RenderParams = {
   primary: string;
   secondary: string;
-  topColor: string;
   sideColor: string;
+  bottomColor: string;
   frontColor: string;
   angle: number;
   extrusionAngle: number;
@@ -28,7 +28,7 @@ export const styleCatalog: Array<{ id: StyleId; index: string; name: string; sho
   { id: "duotone", index: "01", name: "双色分层", short: "顶层与底层的色彩叠置", suggestion: "SVG / PNG 均适合" },
   { id: "gradient", index: "02", name: "线性渐变", short: "主题色驱动的轮廓填充", suggestion: "SVG / PNG 均适合" },
   { id: "glass", index: "03", name: "柔和玻璃", short: "低模糊与柔光高光", suggestion: "复杂效果建议 PNG" },
-  { id: "extrude", index: "04", name: "2.5D 轻拟物", short: "三面可配色的等距挤出", suggestion: "复杂效果建议 PNG" },
+  { id: "extrude", index: "04", name: "2.5D 轻拟物", short: "正面、侧面与底面的两向挤出", suggestion: "复杂效果建议 PNG" },
   { id: "scene", index: "05", name: "3D 插画场景", short: "等轴底座上的毛玻璃实体", suggestion: "完整质感建议 PNG" },
 ];
 
@@ -81,8 +81,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const gradient = gradientAngle(params.angle);
   const p = escapeXml(params.primary);
   const s = escapeXml(params.secondary);
-  const top = escapeXml(params.topColor);
   const side = escapeXml(params.sideColor);
+  const bottom = escapeXml(params.bottomColor);
   const front = escapeXml(params.frontColor);
   const extrusion = Math.max(2, params.extrusion);
   const crop = `0 0 ${size} ${size}`;
@@ -100,7 +100,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const sceneCurrent = iconFrame(70, 62, 180);
   const gradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-main`);
   const gradientSceneCurrent = gradientFrame(70, 62, 180, 180, `whole-${uid}-scene`);
-  const createExtrusionLayers = (originX: number, originY: number, width: number, shiftScale: number, color: string, angle: number) => {
+  const createExtrusionLayers = (originX: number, originY: number, width: number, shiftScale: number, color: string, angle: number, plane: "side" | "bottom") => {
     const count = Math.max(4, Math.round(extrusion / 2));
     const radians = (angle * Math.PI) / 180;
     const unitX = Math.cos(radians);
@@ -108,7 +108,9 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     return Array.from({ length: count }, (_, index) => {
       const ratio = (index + 1) / count;
       const shift = ratio * extrusion * shiftScale;
-      return `<g fill="${color}" opacity="${(0.30 + ratio * 0.56).toFixed(2)}">${iconFrame(originX + unitX * shift, originY + unitY * shift, width)}</g>`;
+      const offsetX = plane === "side" ? unitX * shift : unitX * shift * .22;
+      const offsetY = plane === "side" ? unitY * shift * .22 : unitY * shift;
+      return `<g fill="${color}" opacity="${(0.26 + ratio * 0.58).toFixed(2)}">${iconFrame(originX + offsetX, originY + offsetY, width)}</g>`;
     }).join("");
   };
   const baseVisual = params.sceneBase
@@ -131,16 +133,14 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g transform="translate(5 7)" fill="#173746" opacity=".12" filter="url(#soft-${uid})">${current}</g><g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientCurrent}</g><g fill="none" stroke="white" stroke-width="2.5" opacity="${(params.highlight / 140).toFixed(2)}">${current}</g>`;
   }
   if (style === "extrude") {
-    const depthLayers = createExtrusionLayers(52, 52, 216, 1, side, params.extrusionAngle);
-    const radians = (params.extrusionAngle * Math.PI) / 180;
-    const capOffset = Math.max(3, extrusion * .24);
-    const capX = Math.cos(radians) * capOffset * -1;
-    const capY = Math.sin(radians) * capOffset * -1;
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${depthLayers}<g fill="${top}" opacity=".97">${iconFrame(52 + capX, 52 + capY, 216)}</g><g fill="${front}" filter="url(#lift-${uid})">${current}</g>`;
+    const bottomLayers = createExtrusionLayers(52, 52, 216, 1, bottom, params.extrusionAngle, "bottom");
+    const sideLayers = createExtrusionLayers(52, 52, 216, 1, side, params.extrusionAngle, "side");
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${bottomLayers}${sideLayers}<g fill="${front}" filter="url(#lift-${uid})">${current}</g>`;
   }
   if (style === "scene") {
-    const depthLayers = createExtrusionLayers(70, 62, 180, .55, side, 55);
-    artwork = `${baseVisual}<rect x="24" y="28" width="272" height="264" rx="26" fill="#F8F6F0" opacity=".24"/>${decor}<ellipse cx="164" cy="237" rx="87" ry="25" fill="#15313C" opacity=".14" filter="url(#soft-${uid})"/>${depthLayers}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g><g fill="none" stroke="white" stroke-width=".32" opacity="${(params.highlight / 150).toFixed(2)}">${sceneCurrent}</g><path d="M49 250L164 287L276 236" fill="none" stroke="white" stroke-opacity=".64"/>`;
+    const bottomLayers = createExtrusionLayers(70, 62, 180, .55, bottom, 55, "bottom");
+    const sideLayers = createExtrusionLayers(70, 62, 180, .55, side, 55, "side");
+    artwork = `${baseVisual}<rect x="24" y="28" width="272" height="264" rx="26" fill="#F8F6F0" opacity=".24"/>${decor}<ellipse cx="164" cy="237" rx="87" ry="25" fill="#15313C" opacity=".14" filter="url(#soft-${uid})"/>${bottomLayers}${sideLayers}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g><g fill="none" stroke="white" stroke-width=".32" opacity="${(params.highlight / 150).toFixed(2)}">${sceneCurrent}</g><path d="M49 250L164 287L276 236" fill="none" stroke="white" stroke-opacity=".64"/>`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
 }
