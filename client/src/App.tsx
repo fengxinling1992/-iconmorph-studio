@@ -1,3 +1,4 @@
+/** IconMorph Studio — 以材料实验室视觉系统统一的单页应用路由。 */
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
