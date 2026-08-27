@@ -116,11 +116,14 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     const leftBottom = { x: originX + width * .18, y: originY + width * .82 };
     const rightBottom = { x: originX + width * .82, y: originY + width * .82 };
     const rightTop = { x: originX + width * .82, y: originY + width * .18 };
+    const overlap = Math.max(1.5, Math.min(3, extrusion * .12));
+    const leftBottomOverlap = { x: leftBottom.x, y: leftBottom.y - overlap };
+    const rightBottomOverlap = { x: rightBottom.x, y: rightBottom.y - overlap };
     const extendedLeftBottom = { x: leftBottom.x + offsetX, y: leftBottom.y + offsetY };
     const extendedRightBottom = { x: rightBottom.x + offsetX, y: rightBottom.y + offsetY };
     const extendedRightTop = { x: rightTop.x + offsetX, y: rightTop.y + offsetY };
     const point = (target: { x: number; y: number }) => `${target.x.toFixed(2)} ${target.y.toFixed(2)}`;
-    const bottomPath = `M${point(leftBottom)}L${point(rightBottom)}L${point(extendedRightBottom)}L${point(extendedLeftBottom)}Z`;
+    const bottomPath = `M${point(leftBottomOverlap)}L${point(rightBottomOverlap)}L${point(extendedRightBottom)}L${point(extendedLeftBottom)}Z`;
     const sidePath = `M${point(rightTop)}L${point(rightBottom)}L${point(extendedRightBottom)}L${point(extendedRightTop)}Z`;
     return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><path d="${sidePath}" fill="${side}"/><path d="${bottomPath}" fill="${bottom}"/></g>`;
   };
