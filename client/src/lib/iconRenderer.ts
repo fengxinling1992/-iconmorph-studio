@@ -107,21 +107,28 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
       const ratio = index / steps;
       return maskFrame(originX + offsetX * ratio, originY + offsetY * ratio);
     }).join("");
-    // 侧面和底面由同一闭合外壳承载。两块局部四边形仅覆盖真实外露的挤出带，
-    // 并在「正面右下角 → 挤出后右下角」这条随角度旋转的斜线上相接。
+    // 第二分面随挤出方向在顶部或底部切换：90°–270° 使用顶边，其余使用底边。
+    // 两块局部四边形仅覆盖真实外露的挤出带，并与右侧面共享同一闭合外壳。
+    const normalizedAngle = ((angle % 360) + 360) % 360;
+    const useTopEdge = normalizedAngle >= 90 && normalizedAngle <= 270;
+    const leftTop = { x: originX + width * .18, y: originY + width * .18 };
     const leftBottom = { x: originX + width * .18, y: originY + width * .82 };
     const rightBottom = { x: originX + width * .82, y: originY + width * .82 };
     const rightTop = { x: originX + width * .82, y: originY + width * .18 };
     const overlap = Math.max(1.5, Math.min(3, extrusion * .12));
-    const leftBottomOverlap = { x: leftBottom.x, y: leftBottom.y - overlap };
-    const rightBottomOverlap = { x: rightBottom.x, y: rightBottom.y - overlap };
-    const extendedLeftBottom = { x: leftBottom.x + offsetX, y: leftBottom.y + offsetY };
+    const secondLeft = useTopEdge ? leftTop : leftBottom;
+    const secondRight = useTopEdge ? rightTop : rightBottom;
+    const overlapDirection = useTopEdge ? 1 : -1;
+    const secondLeftOverlap = { x: secondLeft.x, y: secondLeft.y + overlap * overlapDirection };
+    const secondRightOverlap = { x: secondRight.x, y: secondRight.y + overlap * overlapDirection };
+    const extendedSecondLeft = { x: secondLeft.x + offsetX, y: secondLeft.y + offsetY };
+    const extendedSecondRight = { x: secondRight.x + offsetX, y: secondRight.y + offsetY };
     const extendedRightBottom = { x: rightBottom.x + offsetX, y: rightBottom.y + offsetY };
     const extendedRightTop = { x: rightTop.x + offsetX, y: rightTop.y + offsetY };
     const point = (target: { x: number; y: number }) => `${target.x.toFixed(2)} ${target.y.toFixed(2)}`;
-    const bottomPath = `M${point(leftBottomOverlap)}L${point(rightBottomOverlap)}L${point(extendedRightBottom)}L${point(extendedLeftBottom)}Z`;
+    const secondFacePath = `M${point(secondLeftOverlap)}L${point(secondRightOverlap)}L${point(extendedSecondRight)}L${point(extendedSecondLeft)}Z`;
     const sidePath = `M${point(rightTop)}L${point(rightBottom)}L${point(extendedRightBottom)}L${point(extendedRightTop)}Z`;
-    return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><path d="${sidePath}" fill="${side}"/><path d="${bottomPath}" fill="${bottom}"/></g>`;
+    return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><path d="${sidePath}" fill="${side}"/><path d="${secondFacePath}" fill="${bottom}"/></g>`;
   };
   const sceneBase = params.sceneBase || "/manus-storage/scene-base_62b9c12e.svg";
   const baseVisual = `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
@@ -149,7 +156,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${integratedExtrusion}<g fill="${front}" filter="url(#lift-${uid})">${current}</g>`;
   }
   if (style === "scene") {
-    const integratedExtrusion = createIntegratedExtrusion(70, 62, 180, .55, 55, `volume-${uid}`);
+    const integratedExtrusion = createIntegratedExtrusion(70, 62, 180, .55, params.extrusionAngle, `volume-${uid}`);
     artwork = `${baseVisual}${sceneDecorBehind}${integratedExtrusion}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientSceneCurrent}</g>${sceneDecorFront}`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
