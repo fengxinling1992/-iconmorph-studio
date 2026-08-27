@@ -159,9 +159,19 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${x1.toFixed(3)}" y1="${y1.toFixed(3)}" x2="${x2.toFixed(3)}" y2="${y2.toFixed(3)}"><stop offset="0%" stop-color="${p}"/><stop offset="100%" stop-color="${s}"/></linearGradient>`;
   };
   const iconFrame = (x: number, y: number, width: number, height = width) => `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet">${content}</svg>`;
-  const gradientFrame = (x: number, y: number, width: number, height: number, gradientId: string) => `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><defs>${wholeGradient(gradientId)}</defs><g fill="url(#${gradientId})">${content}</g></svg>`;
-  const current = iconFrame(52, 52, 216);
-  const sceneCurrent = iconFrame(70, 62, 180);
+  const colorizedFrame = (x: number, y: number, width: number, height: number, color: string, label: string) => {
+    const paintClass = `paint-${uid}-${label}`;
+    return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><style>.${paintClass} *{fill:${color}!important}.${paintClass} [fill="none"]{fill:none!important;stroke:${color}!important}.${paintClass} [stroke]{stroke:${color}!important}.${paintClass} [fill="#fff"],.${paintClass} [fill="#ffffff"],.${paintClass} [fill="white"],.${paintClass} [fill="#F7F4EE"]{fill:#F7F4EE!important}</style><g class="${paintClass}">${content}</g></svg>`;
+  };
+  const gradientFrame = (x: number, y: number, width: number, height: number, gradientId: string) => {
+    const paintClass = `gradient-${uid}-${gradientId}`;
+    return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><defs>${wholeGradient(gradientId)}</defs><style>.${paintClass} *{fill:url(#${gradientId})!important}.${paintClass} [fill="none"]{fill:none!important;stroke:url(#${gradientId})!important}.${paintClass} [stroke]{stroke:url(#${gradientId})!important}.${paintClass} [fill="#fff"],.${paintClass} [fill="#ffffff"],.${paintClass} [fill="white"],.${paintClass} [fill="#F7F4EE"]{fill:#F7F4EE!important}</style><g class="${paintClass}">${content}</g></svg>`;
+  };
+  const current = colorizedFrame(52, 52, 216, 216, front, "front");
+  const sceneCurrent = colorizedFrame(70, 62, 180, 180, front, "scene-front");
+  const primaryCurrent = colorizedFrame(52, 52, 216, 216, p, "primary");
+  const secondaryOffset = (distance: number) => colorizedFrame(52 + distance, 52 + distance, 216, 216, s, "secondary");
+  const darkOffset = colorizedFrame(57, 59, 216, 216, "#173746", "glass-shadow");
   const gradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-main`);
   const gradientSceneCurrent = gradientFrame(70, 62, 180, 180, `whole-${uid}-scene`);
   const createIntegratedExtrusion = (originX: number, originY: number, width: number, shiftScale: number, angle: number, maskKey: string) => {
@@ -194,13 +204,25 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     sourceContours.forEach((contour) => {
       const mapped = contour.points.map(mapPoint);
       const segmentCount = contour.closed ? mapped.length : Math.max(0, mapped.length - 1);
+      const signedArea = contour.closed ? mapped.reduce((area, currentPoint, index) => {
+        const nextPoint = mapped[(index + 1) % mapped.length];
+        return area + currentPoint.x * nextPoint.y - nextPoint.x * currentPoint.y;
+      }, 0) / 2 : 1;
       Array.from({ length: segmentCount }, (_, index) => {
         const from = mapped[index];
         const to = mapped[(index + 1) % mapped.length];
         const midpoint = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
         const extrudedFrom = { x: from.x + offsetX, y: from.y + offsetY };
         const extrudedTo = { x: to.x + offsetX, y: to.y + offsetY };
-        facePaths[faceBucketForSegment(midpoint)].push(`M${point(from)}L${point(to)}L${point(extrudedTo)}L${point(extrudedFrom)}Z`);
+        const segmentX = to.x - from.x;
+        const segmentY = to.y - from.y;
+        const segmentLength = Math.hypot(segmentX, segmentY);
+        const outwardNormal = signedArea >= 0 ? { x: segmentY, y: -segmentX } : { x: -segmentY, y: segmentX };
+        const facesDirection = outwardNormal.x * offsetX + outwardNormal.y * offsetY;
+        const isDiscontinuous = segmentLength > Math.hypot(width, width) * .34;
+        if (segmentLength > .02 && facesDirection > .02 && !isDiscontinuous) {
+          facePaths[faceBucketForSegment(midpoint)].push(`M${point(from)}L${point(to)}L${point(extrudedTo)}L${point(extrudedFrom)}Z`);
+        }
       });
     });
     const geometryFaces = `${facePaths.primary.length ? `<path d="${facePaths.primary.join("")}" fill="${side}"/>` : ""}${facePaths.secondary.length ? `<path d="${facePaths.secondary.join("")}" fill="${bottom}"/>` : ""}`;
@@ -220,17 +242,17 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
 
   if (style === "duotone") {
     const layerDistance = Math.max(4, params.shadowLength * .42);
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g transform="translate(${layerDistance.toFixed(1)} ${layerDistance.toFixed(1)})" fill="${s}">${current}</g><g fill="${p}" filter="url(#lift-${uid})">${current}</g>`;
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${secondaryOffset(layerDistance)}<g filter="url(#lift-${uid})">${primaryCurrent}</g>`;
   }
   if (style === "gradient") {
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${gradientCurrent}`;
   }
   if (style === "glass") {
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g transform="translate(5 7)" fill="#173746" opacity=".12" filter="url(#soft-${uid})">${current}</g><g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientCurrent}</g><g fill="none" stroke="white" stroke-width="2.5" opacity="${(params.highlight / 140).toFixed(2)}">${current}</g>`;
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g opacity=".12" filter="url(#soft-${uid})">${darkOffset}</g><g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientCurrent}</g><g fill="none" stroke="white" stroke-width="2.5" opacity="${(params.highlight / 140).toFixed(2)}">${current}</g>`;
   }
   if (style === "extrude") {
     const integratedExtrusion = createIntegratedExtrusion(52, 52, 216, 1, params.extrusionAngle, `volume-${uid}`);
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${integratedExtrusion}<g fill="${front}" filter="url(#lift-${uid})">${current}</g>`;
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${integratedExtrusion}<g filter="url(#lift-${uid})">${current}</g>`;
   }
   if (style === "scene") {
     const integratedExtrusion = createIntegratedExtrusion(70, 62, 180, .55, params.extrusionAngle, `volume-${uid}`);
