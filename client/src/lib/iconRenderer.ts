@@ -21,6 +21,8 @@ export type RenderParams = {
   blur: number;
   highlight: number;
   safeExtrusion: boolean;
+  sceneExtrusion: number;
+  sceneExtrusionAngle: number;
   sceneObjectDecor: "orb" | "cube";
   sceneMotionDecor: "ribbon" | "orbit";
   sceneBase?: string;
@@ -177,8 +179,11 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const bottom = escapeXml(params.bottomColor);
   const front = escapeXml(params.frontColor);
   const requestedExtrusion = Math.max(2, params.extrusion);
+  const requestedSceneExtrusion = Math.max(2, params.sceneExtrusion);
   const extrusionSafety = getExtrusionSafetyInfo(asset, requestedExtrusion);
+  const sceneExtrusionSafety = getExtrusionSafetyInfo(asset, requestedSceneExtrusion);
   const extrusion = params.safeExtrusion ? extrusionSafety.recommendedThickness : requestedExtrusion;
+  const sceneExtrusion = params.safeExtrusion ? sceneExtrusionSafety.recommendedThickness : requestedSceneExtrusion;
   const crop = `0 0 ${size} ${size}`;
   const [sourceX = 0, sourceY = 0, sourceWidth = 24, sourceHeight = 24] = viewBox.split(/[\s,]+/).map(Number);
   const sourceContours = getSvgContours(asset.svg, viewBox, content);
@@ -204,13 +209,16 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const secondaryOffset = (distance: number) => colorizedFrame(52 + distance, 52 + distance, 216, 216, s, "secondary");
   const darkOffset = colorizedFrame(57, 59, 216, 216, "#173746", "glass-shadow");
   const gradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-main`);
-  const gradientSceneCurrent = gradientFrame(70, 62, 180, 180, `whole-${uid}-scene`);
-  const sceneIsoTransform = "translate(160 152) matrix(0.7071 0.4082 -0.7071 0.4082 0 0) translate(-160 -152)";
+  const sceneOrigin = { x: 78, y: 114, width: 164 };
+  const sceneRightEdge = sceneOrigin.x + sceneOrigin.width;
+  const sceneShear = 0.57735;
+  const gradientSceneCurrent = gradientFrame(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, sceneOrigin.width, `whole-${uid}-scene`);
+  const sceneIsoTransform = `matrix(1 ${sceneShear} 0 1 0 ${(-sceneShear * sceneRightEdge).toFixed(3)})`;
   const projectedSceneCurrent = `<g transform="${sceneIsoTransform}">${gradientSceneCurrent}</g>`;
-  const createIntegratedExtrusion = (originX: number, originY: number, width: number, shiftScale: number, angle: number, maskKey: string, isometric = false) => {
+  const createIntegratedExtrusion = (originX: number, originY: number, width: number, shiftScale: number, angle: number, maskKey: string, depth: number, isometric = false) => {
     // 标准等角参考以 30° 为基准：默认右侧和底侧外扩均与水平轴形成 30° 关系。
     const radians = (angle * Math.PI) / 180;
-    const shift = extrusion * shiftScale;
+    const shift = depth * shiftScale;
     const offsetX = Math.cos(radians) * shift;
     const offsetY = Math.sin(radians) * shift;
     // 将每段实际轮廓沿同一向量平移，圆形、圆角及异形路径都会得到等距的连续挤出带。
@@ -226,11 +234,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
       const x = originX + ((point.x - sourceX) / sourceWidth) * width;
       const y = originY + ((point.y - sourceY) / sourceHeight) * width;
       if (!isometric) return { x, y };
-      const centerX = originX + width / 2;
-      const centerY = originY + width / 2;
-      const localX = x - centerX;
-      const localY = y - centerY;
-      return { x: centerX + .7071 * localX - .7071 * localY, y: centerY + .4082 * localX + .4082 * localY };
+      const rightEdge = originX + width;
+      return { x, y: y + sceneShear * (x - rightEdge) };
     };
     const contourCenter = { x: originX + width / 2, y: originY + width / 2 };
     const point = (target: ContourPoint) => `${target.x.toFixed(2)} ${target.y.toFixed(2)}`;
@@ -302,11 +307,11 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g opacity=".12" filter="url(#soft-${uid})">${darkOffset}</g><g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientCurrent}</g><g fill="none" stroke="white" stroke-width="2.5" opacity="${(params.highlight / 140).toFixed(2)}">${current}</g>`;
   }
   if (style === "extrude") {
-    const integratedExtrusion = createIntegratedExtrusion(52, 52, 216, 1, params.extrusionAngle, `volume-${uid}`);
+    const integratedExtrusion = createIntegratedExtrusion(52, 52, 216, 1, params.extrusionAngle, `volume-${uid}`, extrusion);
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${integratedExtrusion}<g filter="url(#lift-${uid})">${current}</g>`;
   }
   if (style === "scene") {
-    const integratedExtrusion = createIntegratedExtrusion(70, 62, 180, .55, params.extrusionAngle, `volume-${uid}`, true);
+    const integratedExtrusion = createIntegratedExtrusion(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, .55, params.sceneExtrusionAngle, `volume-${uid}`, sceneExtrusion, true);
     artwork = `${baseVisual}${sceneDecorBehind}${integratedExtrusion}<g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${projectedSceneCurrent}</g>${sceneDecorFront}`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
