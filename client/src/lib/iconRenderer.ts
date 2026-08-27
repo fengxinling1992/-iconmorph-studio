@@ -23,6 +23,7 @@ export type RenderParams = {
   safeExtrusion: boolean;
   sceneExtrusion: number;
   sceneExtrusionAngle: number;
+  sceneSkewAngle: number;
   sceneObjectDecor: "orb" | "cube";
   sceneMotionDecor: "ribbon" | "orbit";
   sceneBase?: string;
@@ -211,7 +212,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const gradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-main`);
   const sceneOrigin = { x: 78, y: 114, width: 164 };
   const sceneRightEdge = sceneOrigin.x + sceneOrigin.width;
-  const sceneShear = 0.57735;
+  const sceneShear = Math.tan((params.sceneSkewAngle * Math.PI) / 180);
+  const decorLift = Math.min(26, Math.max(7, sceneExtrusion * .9));
   const gradientSceneCurrent = gradientFrame(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, sceneOrigin.width, `whole-${uid}-scene`);
   const sceneIsoTransform = `matrix(1 ${sceneShear} 0 1 0 ${(-sceneShear * sceneRightEdge).toFixed(3)})`;
   const projectedSceneCurrent = `<g transform="${sceneIsoTransform}">${gradientSceneCurrent}</g>`;
@@ -279,13 +281,13 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const sceneBase = params.sceneBase || "/manus-storage/scene-base_62b9c12e.svg";
   const baseVisual = `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
   const motionDecor = params.sceneMotionDecor === "orbit"
-    ? `<image href="/manus-storage/orbit_2a9dae30.png" x="4" y="43" width="312" height="160" preserveAspectRatio="xMidYMid meet" opacity=".88"/>`
-    : `<image href="/manus-storage/ribbon_394fae47.png" x="18" y="42" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`;
+    ? `<image href="/manus-storage/orbit_2a9dae30.png" x="4" y="${(43 - decorLift * .45).toFixed(1)}" width="312" height="160" preserveAspectRatio="xMidYMid meet" opacity=".88"/>`
+    : `<image href="/manus-storage/ribbon_394fae47.png" x="18" y="${(42 - decorLift * .45).toFixed(1)}" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`;
   const objectDecorBehind = params.sceneObjectDecor === "cube"
-    ? `<image href="/manus-storage/accent-cube_cb8409c6.png" x="36" y="105" width="58" height="63" preserveAspectRatio="xMidYMid meet"/>`
+    ? `<image href="/manus-storage/accent-cube_cb8409c6.png" x="52" y="${(133 - decorLift).toFixed(1)}" width="15" height="16" preserveAspectRatio="xMidYMid meet"/>`
     : "";
   const objectDecorFront = params.sceneObjectDecor === "orb"
-    ? `<image href="/manus-storage/glass-orb_3c311794.png" x="246" y="54" width="48" height="48" preserveAspectRatio="xMidYMid meet"/>`
+    ? `<image href="/manus-storage/glass-orb_3c311794.png" x="256" y="${(85 - decorLift).toFixed(1)}" width="12" height="12" preserveAspectRatio="xMidYMid meet"/>`
     : "";
   const defaultDecorBehind = `${motionDecor}${objectDecorBehind}`;
   const defaultDecorFront = objectDecorFront;
