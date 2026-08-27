@@ -35,7 +35,10 @@ export const styleCatalog: Array<{ id: StyleId; index: string; name: string; sho
 const svgStart = /<svg\b([^>]*)>/i;
 const STANDARD_VIEWBOX = "0 0 100 100";
 type VisibleBounds = { x: number; y: number; width: number; height: number };
+type ContourPoint = { x: number; y: number };
+type SvgContour = { points: ContourPoint[]; closed: boolean };
 const visibleBoundsCache = new Map<string, VisibleBounds>();
+const contourCache = new Map<string, SvgContour[]>();
 
 function numericSize(value?: string) {
   const number = Number.parseFloat(value ?? "");
@@ -83,6 +86,42 @@ function getVisibleBounds(sourceKey: string, viewBox: string, content: string, f
   }
 }
 
+function getSvgContours(sourceKey: string, viewBox: string, content: string): SvgContour[] {
+  const cached = contourCache.get(sourceKey);
+  if (cached) return cached;
+  if (typeof document === "undefined" || !document.body) return [];
+  const measurementSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const measurementGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  measurementSvg.setAttribute("viewBox", viewBox);
+  measurementSvg.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;overflow:visible";
+  measurementGroup.innerHTML = content;
+  measurementSvg.appendChild(measurementGroup);
+  document.body.appendChild(measurementSvg);
+  try {
+    const nodes = Array.from(measurementGroup.querySelectorAll("path,rect,circle,ellipse,polygon,polyline,line"));
+    const contours = nodes.flatMap((node) => {
+      const geometry = node as SVGGeometryElement;
+      if (typeof geometry.getTotalLength !== "function" || typeof geometry.getPointAtLength !== "function") return [];
+      const length = geometry.getTotalLength();
+      if (!Number.isFinite(length) || length <= 0) return [];
+      const tag = node.tagName.toLowerCase();
+      const closed = ["rect", "circle", "ellipse", "polygon"].includes(tag) || /z\s*$/i.test(node.getAttribute("d") ?? "");
+      const count = Math.max(closed ? 16 : 8, Math.min(72, Math.ceil(length / .85)));
+      const points = Array.from({ length: count }, (_, index) => {
+        const point = geometry.getPointAtLength((index / (closed ? count : count - 1)) * length);
+        return { x: point.x, y: point.y };
+      });
+      return points.length > 1 ? [{ points, closed }] : [];
+    });
+    contourCache.set(sourceKey, contours);
+    return contours;
+  } catch {
+    return [];
+  } finally {
+    measurementSvg.remove();
+  }
+}
+
 function escapeXml(value: string) {
   return value.replace(/[<>&"']/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[char] || char);
 }
@@ -111,7 +150,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const extrusion = Math.max(2, params.extrusion);
   const crop = `0 0 ${size} ${size}`;
   const [sourceX = 0, sourceY = 0, sourceWidth = 24, sourceHeight = 24] = viewBox.split(/[\s,]+/).map(Number);
-  const sourceBounds = getVisibleBounds(asset.svg, viewBox, content, { x: sourceX, y: sourceY, width: sourceWidth, height: sourceHeight });
+  const sourceContours = getSvgContours(asset.svg, viewBox, content);
   const wholeGradient = (id: string) => {
     const x1 = sourceX + ((100 - Number(gradient.x)) / 100) * sourceWidth;
     const y1 = sourceY + ((100 - Number(gradient.y)) / 100) * sourceHeight;
@@ -130,44 +169,42 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     const shift = extrusion * shiftScale;
     const offsetX = Math.cos(radians) * shift;
     const offsetY = Math.sin(radians) * shift;
-    const steps = Math.max(4, Math.round(extrusion / 3));
-    const maskFrame = (x: number, y: number) => `<svg x="${x}" y="${y}" width="${width}" height="${width}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><g fill="#fff" stroke="#fff">${content}</g></svg>`;
-    const maskCopies = Array.from({ length: steps + 1 }, (_, index) => {
-      const ratio = index / steps;
-      return maskFrame(originX + offsetX * ratio, originY + offsetY * ratio);
-    }).join("");
-    // 挤出双分面按四个角度象限选择相邻外边：右下、左下、左上、右上。
-    // 两块局部四边形仅覆盖真实外露的挤出带，并在共享转角到挤出终点的斜线上连续衔接。
+    // 将每段实际轮廓沿同一向量平移，圆形、圆角及异形路径都会得到等距的连续挤出带。
     const normalizedAngle = ((angle % 360) + 360) % 360;
     const faces: ["right" | "bottom" | "left" | "top", "right" | "bottom" | "left" | "top"] = normalizedAngle < 90
       ? ["right", "bottom"]
       : normalizedAngle < 180
         ? ["bottom", "left"]
         : normalizedAngle < 270
-          ? ["left", "top"]
+        ? ["left", "top"]
           : ["top", "right"];
-    // 使用源 SVG 实际可见轮廓边界映射顶角，而非按 viewBox 比例猜测。
-    const mapSourcePoint = (x: number, y: number) => ({
-      x: originX + ((x - sourceX) / sourceWidth) * width,
-      y: originY + ((y - sourceY) / sourceHeight) * width,
-    });
-    const leftTop = mapSourcePoint(sourceBounds.x, sourceBounds.y);
-    const leftBottom = mapSourcePoint(sourceBounds.x, sourceBounds.y + sourceBounds.height);
-    const rightBottom = mapSourcePoint(sourceBounds.x + sourceBounds.width, sourceBounds.y + sourceBounds.height);
-    const rightTop = mapSourcePoint(sourceBounds.x + sourceBounds.width, sourceBounds.y);
-    const overlap = Math.max(1.5, Math.min(3, extrusion * .12));
-    const extendedLeftTop = { x: leftTop.x + offsetX, y: leftTop.y + offsetY };
-    const extendedLeftBottom = { x: leftBottom.x + offsetX, y: leftBottom.y + offsetY };
-    const extendedRightBottom = { x: rightBottom.x + offsetX, y: rightBottom.y + offsetY };
-    const extendedRightTop = { x: rightTop.x + offsetX, y: rightTop.y + offsetY };
-    const point = (target: { x: number; y: number }) => `${target.x.toFixed(2)} ${target.y.toFixed(2)}`;
-    const edgePath = (edge: "right" | "bottom" | "left" | "top") => {
-      if (edge === "right") return `M${point({ x: rightTop.x - overlap, y: rightTop.y })}L${point({ x: rightBottom.x - overlap, y: rightBottom.y })}L${point(extendedRightBottom)}L${point(extendedRightTop)}Z`;
-      if (edge === "bottom") return `M${point({ x: leftBottom.x, y: leftBottom.y - overlap })}L${point({ x: rightBottom.x, y: rightBottom.y - overlap })}L${point(extendedRightBottom)}L${point(extendedLeftBottom)}Z`;
-      if (edge === "left") return `M${point({ x: leftTop.x + overlap, y: leftTop.y })}L${point({ x: leftBottom.x + overlap, y: leftBottom.y })}L${point(extendedLeftBottom)}L${point(extendedLeftTop)}Z`;
-      return `M${point({ x: leftTop.x, y: leftTop.y + overlap })}L${point({ x: rightTop.x, y: rightTop.y + overlap })}L${point(extendedRightTop)}L${point(extendedLeftTop)}Z`;
+    const mapPoint = (point: ContourPoint) => ({ x: originX + ((point.x - sourceX) / sourceWidth) * width, y: originY + ((point.y - sourceY) / sourceHeight) * width });
+    const contourCenter = { x: originX + width / 2, y: originY + width / 2 };
+    const point = (target: ContourPoint) => `${target.x.toFixed(2)} ${target.y.toFixed(2)}`;
+    const faceBucketForSegment = (midpoint: ContourPoint) => {
+      const horizontal = midpoint.x - contourCenter.x;
+      const vertical = midpoint.y - contourCenter.y;
+      if (faces[0] === "right" && faces[1] === "bottom") return horizontal >= vertical ? "primary" : "secondary";
+      if (faces[0] === "bottom" && faces[1] === "left") return vertical >= -horizontal ? "primary" : "secondary";
+      if (faces[0] === "left" && faces[1] === "top") return -horizontal >= -vertical ? "primary" : "secondary";
+      return -vertical >= horizontal ? "primary" : "secondary";
     };
-    return `<defs><mask id="${maskKey}" maskUnits="userSpaceOnUse" x="0" y="0" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#000"/>${maskCopies}</mask></defs><g mask="url(#${maskKey})"><path d="${edgePath(faces[0])}" fill="${side}"/><path d="${edgePath(faces[1])}" fill="${bottom}"/></g>`;
+    const facePaths = { primary: [] as string[], secondary: [] as string[] };
+    sourceContours.forEach((contour) => {
+      const mapped = contour.points.map(mapPoint);
+      const segmentCount = contour.closed ? mapped.length : Math.max(0, mapped.length - 1);
+      Array.from({ length: segmentCount }, (_, index) => {
+        const from = mapped[index];
+        const to = mapped[(index + 1) % mapped.length];
+        const midpoint = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+        const extrudedFrom = { x: from.x + offsetX, y: from.y + offsetY };
+        const extrudedTo = { x: to.x + offsetX, y: to.y + offsetY };
+        facePaths[faceBucketForSegment(midpoint)].push(`M${point(from)}L${point(to)}L${point(extrudedTo)}L${point(extrudedFrom)}Z`);
+      });
+    });
+    const geometryFaces = `${facePaths.primary.length ? `<path d="${facePaths.primary.join("")}" fill="${side}"/>` : ""}${facePaths.secondary.length ? `<path d="${facePaths.secondary.join("")}" fill="${bottom}"/>` : ""}`;
+    const fallback = `<g fill="${side}">${iconFrame(originX + offsetX, originY + offsetY, width)}</g>`;
+    return geometryFaces || fallback;
   };
   const sceneBase = params.sceneBase || "/manus-storage/scene-base_62b9c12e.svg";
   const baseVisual = `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
