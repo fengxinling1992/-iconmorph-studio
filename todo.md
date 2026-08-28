@@ -342,3 +342,9 @@
 - [ ] 修复 Actions 中 pnpm 版本与 packageManager 不一致导致的构建失败。
 - [ ] 重新运行 Pages 工作流并验证发布地址不再返回 404。
 
+
+## Pages 启用修复
+
+- [ ] 让工作流自动启用 GitHub Pages，解决 Configure Pages 的 Not Found。
+- [ ] 重新运行 Actions，确认站点成功发布并可访问。
+
