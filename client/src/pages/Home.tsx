@@ -36,6 +36,7 @@ type OutputFormat = "svg" | "png";
 type LibraryGroup = { id: string; name: string; order: number };
 type LibraryIcon = IconAsset & { groupId: string; code: string };
 type IconLibrary = { groups: LibraryGroup[]; icons: LibraryIcon[] };
+type AssetCollection = "library" | "uploaded";
 
 const ICON_LIBRARY_URL = "/manus-storage/iconfont-library_e141fca4.json";
 
@@ -173,6 +174,7 @@ export default function Home() {
   const [assets, setAssets] = useState<IconAsset[]>(defaultIcons());
   const [activeId, setActiveId] = useState("archive");
   const [iconLibrary, setIconLibrary] = useState<IconLibrary>({ groups: [], icons: [] });
+  const [assetCollection, setAssetCollection] = useState<AssetCollection>("library");
   const [activeLibraryGroup, setActiveLibraryGroup] = useState("");
   const [librarySearch, setLibrarySearch] = useState("");
   const [libraryStatus, setLibraryStatus] = useState("正在载入图标库…");
@@ -214,11 +216,14 @@ export default function Home() {
 
   const activeAsset = useMemo(() => assets.find((asset) => asset.id === activeId) ?? assets[0], [assets, activeId]);
   const normalizedLibrarySearch = librarySearch.trim().toLocaleLowerCase();
-  const visibleLibraryIcons = useMemo(() => iconLibrary.icons.filter((icon) => {
+  const libraryGroups = useMemo(() => iconLibrary.groups.filter((group) => group.id !== "uploaded-assets"), [iconLibrary.groups]);
+  const libraryIcons = useMemo(() => iconLibrary.icons.filter((icon) => icon.groupId !== "uploaded-assets"), [iconLibrary.icons]);
+  const uploadedIcons = useMemo(() => iconLibrary.icons.filter((icon) => icon.groupId === "uploaded-assets"), [iconLibrary.icons]);
+  const visibleLibraryIcons = useMemo(() => (assetCollection === "library" ? libraryIcons : uploadedIcons).filter((icon) => {
     const matchesSearch = !normalizedLibrarySearch || `${icon.name} ${icon.code}`.toLocaleLowerCase().includes(normalizedLibrarySearch);
-    return matchesSearch && (normalizedLibrarySearch || icon.groupId === activeLibraryGroup);
-  }), [iconLibrary.icons, activeLibraryGroup, normalizedLibrarySearch]);
-  const libraryGroupCounts = useMemo(() => new Map(iconLibrary.groups.map((group) => [group.id, iconLibrary.icons.filter((icon) => icon.groupId === group.id).length])), [iconLibrary]);
+    return matchesSearch && (assetCollection === "uploaded" || normalizedLibrarySearch || icon.groupId === activeLibraryGroup);
+  }), [assetCollection, libraryIcons, uploadedIcons, activeLibraryGroup, normalizedLibrarySearch]);
+  const libraryGroupCounts = useMemo(() => new Map(libraryGroups.map((group) => [group.id, libraryIcons.filter((icon) => icon.groupId === group.id).length])), [libraryGroups, libraryIcons]);
   const selectedTemplate = styleCatalog.find((style) => style.id === selectedStyle) ?? styleCatalog[0];
   const extrusionSafety = useMemo(() => getExtrusionSafetyInfo(activeAsset, params.extrusion), [activeAsset, params.extrusion]);
   const sceneExtrusionSafety = useMemo(() => getExtrusionSafetyInfo(activeAsset, params.sceneExtrusion), [activeAsset, params.sceneExtrusion]);
@@ -268,6 +273,7 @@ export default function Home() {
         icons: [...current.icons, ...imported.map((asset) => ({ ...asset, groupId: "uploaded-assets", code: "UPLOAD" }))],
       }));
       setActiveLibraryGroup("uploaded-assets");
+      setAssetCollection("uploaded");
       setActiveId(imported[0].id);
       setIsBatch(imported.length > 1 || isBatch);
       setExportNote(`已载入 ${imported.length} 枚 SVG 源资产`);
@@ -351,10 +357,14 @@ export default function Home() {
       <main className="workspace">
         <aside className="asset-rail">
           <div className="rail-head"><div><span className="eyebrow">A / 资产库</span><h2>SVG 组件库</h2></div></div>
-          <button className="library-import" onClick={() => assetInput.current?.click()}><Upload size={17}/><span>上传图标</span><small>支持多选</small></button>
+          <div className="asset-collection-tabs" role="tablist" aria-label="资产分类">
+            <button role="tab" aria-selected={assetCollection === "library"} onClick={() => { setAssetCollection("library"); setLibrarySearch(""); if (!activeLibraryGroup) setActiveLibraryGroup(libraryGroups[0]?.id ?? ""); }} className={assetCollection === "library" ? "asset-collection-active" : ""}><span>图标库</span><small>{libraryIcons.length}</small></button>
+            <button role="tab" aria-selected={assetCollection === "uploaded"} onClick={() => { setAssetCollection("uploaded"); setLibrarySearch(""); }} className={assetCollection === "uploaded" ? "asset-collection-active" : ""}><span>导入 SVG</span><small>{uploadedIcons.length}</small></button>
+          </div>
+          {assetCollection === "uploaded" && <button className="library-import" onClick={() => assetInput.current?.click()}><Upload size={17}/><span>导入 SVG</span><small>支持多选</small></button>}
           <div className="library-search"><Search size={14}/><input value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="搜索图标名称或编码" aria-label="搜索图标库" /><button type="button" onClick={() => setLibrarySearch("")} aria-label="清空搜索">{librarySearch ? "×" : ""}</button></div>
-          <div className="library-label"><span>{librarySearch ? "搜索结果" : "图标库分组"}</span><span>{visibleLibraryIcons.length || assets.length}</span></div>
-          {iconLibrary.groups.length > 0 ? <><div className="library-group-tabs" role="tablist" aria-label="图标库分组">{iconLibrary.groups.map((group) => <button key={group.id} role="tab" aria-selected={activeLibraryGroup === group.id} onClick={() => { setActiveLibraryGroup(group.id); setLibrarySearch(""); }} className={activeLibraryGroup === group.id && !librarySearch ? "library-group-active" : ""}><span>{group.name}</span><small>{libraryGroupCounts.get(group.id) ?? 0}</small></button>)}</div><div className="library-icon-grid">{visibleLibraryIcons.map((asset) => <button key={asset.id} title={`${asset.name} · ${asset.code}`} onClick={() => setActiveId(asset.id)} className={`library-icon-card ${asset.id === activeId ? "library-icon-card-active" : ""}`}><span className="library-icon-preview" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} /><strong>{asset.name}</strong></button>)}</div>{!visibleLibraryIcons.length && <p className="library-empty">未找到匹配的图标</p>}</> : <><p className="library-loading">{libraryStatus}</p><div className="asset-list">{assets.map((asset) => <button key={asset.id} onClick={() => setActiveId(asset.id)} className={`asset-row ${asset.id === activeId ? "asset-row-active" : ""}`}><span className="asset-thumbnail" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} /><span><strong>{asset.name}</strong><small>SVG · 统一画布</small></span>{asset.id === activeId && <Check size={15} />}</button>)}</div></>}
+          <div className="library-label"><span>{librarySearch ? "搜索结果" : assetCollection === "library" ? "图标库分组" : "导入 SVG"}</span><span>{visibleLibraryIcons.length}</span></div>
+          {iconLibrary.groups.length > 0 ? <>{assetCollection === "library" && <div className="library-group-tabs" role="tablist" aria-label="图标库子分组">{libraryGroups.map((group) => <button key={group.id} role="tab" aria-selected={activeLibraryGroup === group.id} onClick={() => { setActiveLibraryGroup(group.id); setLibrarySearch(""); }} className={activeLibraryGroup === group.id && !librarySearch ? "library-group-active" : ""}><span>{group.name}</span><small>{libraryGroupCounts.get(group.id) ?? 0}</small></button>)}</div>}<div className="library-icon-grid">{visibleLibraryIcons.map((asset) => <button key={asset.id} title={`${asset.name} · ${asset.code}`} onClick={() => setActiveId(asset.id)} className={`library-icon-card ${asset.id === activeId ? "library-icon-card-active" : ""}`}><span className="library-icon-preview" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} /><strong>{asset.name}</strong></button>)}</div>{!visibleLibraryIcons.length && <div className="library-empty">{assetCollection === "uploaded" && !librarySearch ? <button onClick={() => assetInput.current?.click()}><Upload size={14}/> 导入第一枚 SVG</button> : "未找到匹配的图标"}</div>}</> : <><p className="library-loading">{libraryStatus}</p><div className="asset-list">{assets.map((asset) => <button key={asset.id} onClick={() => setActiveId(asset.id)} className={`asset-row ${asset.id === activeId ? "asset-row-active" : ""}`}><span className="asset-thumbnail" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} /><span><strong>{asset.name}</strong><small>SVG · 统一画布</small></span>{asset.id === activeId && <Check size={15} />}</button>)}</div></>}
           <div className="rail-footer"><span className="status-led"/> 真源模式已开启</div>
         </aside>
 
