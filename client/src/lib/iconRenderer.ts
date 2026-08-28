@@ -231,6 +231,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><defs>${wholeGradient(gradientId, start, end, direction)}</defs><style>.${paintClass} *{fill:url(#${gradientId})!important}.${paintClass} [fill="none"]{fill:none!important;stroke:url(#${gradientId})!important}.${paintClass} [stroke]{stroke:url(#${gradientId})!important}.${paintClass} [fill="#fff"],.${paintClass} [fill="#ffffff"],.${paintClass} [fill="#FFFFFF"],.${paintClass} [fill="white"],.${paintClass} [fill="#F7F4EE"]{fill:${cutoutColor}!important}</style><g class="${paintClass}">${content}</g></svg>`;
   };
   const current = colorizedFrame(52, 52, 216, 216, front, "front");
+  const extrudeCutoutClass = `extrude-cutout-${uid}`;
+  const extrudeCutouts = `<svg x="52" y="52" width="216" height="216" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><style>.${extrudeCutoutClass} *{fill:none!important;stroke:none!important}.${extrudeCutoutClass} [fill="#fff"],.${extrudeCutoutClass} [fill="#fff"] *,.${extrudeCutoutClass} [fill="#ffffff"],.${extrudeCutoutClass} [fill="#ffffff"] *,.${extrudeCutoutClass} [fill="#FFFFFF"],.${extrudeCutoutClass} [fill="#FFFFFF"] *,.${extrudeCutoutClass} [fill="white"],.${extrudeCutoutClass} [fill="white"] *,.${extrudeCutoutClass} [fill="#F7F4EE"],.${extrudeCutoutClass} [fill="#F7F4EE"] *{fill:#FFFFFF!important;stroke:#FFFFFF!important}</style><g class="${extrudeCutoutClass}">${content}</g></svg>`;
   const sceneCurrent = colorizedFrame(70, 62, 180, 180, front, "scene-front");
   const primaryCurrent = colorizedFrame(52, 52, 216, 216, p, "primary");
   const secondaryOffset = (distance: number) => colorizedFrame(52 + distance, 52 + distance, 216, 216, s, "secondary");
@@ -355,8 +357,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><g opacity=".12" filter="url(#soft-${uid})">${darkOffset}</g><g opacity="${(params.opacity / 100).toFixed(2)}" filter="url(#glow-${uid})">${gradientCurrent}</g><g fill="none" stroke="white" stroke-width="2.5" opacity="${(params.highlight / 140).toFixed(2)}">${current}</g>`;
   }
   if (style === "extrude") {
-    const integratedExtrusion = createIntegratedExtrusion(52, 52, 216, 1, params.extrusionAngle, `volume-${uid}`, extrusion);
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${integratedExtrusion}<g filter="url(#lift-${uid})">${current}</g>`;
+    const integratedExtrusion = createIntegratedExtrusion(52, 52, 216, 1, params.extrusionAngle, `volume-${uid}`, extrusion, false, side, bottom, sceneOuterContours);
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${integratedExtrusion}<g filter="url(#lift-${uid})">${current}</g>${extrudeCutouts}`;
   }
   if (style === "scene") {
     const integratedExtrusion = createIntegratedExtrusion(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, .55, params.sceneExtrusionAngle, `volume-${uid}`, sceneExtrusion, true, sceneSide, sceneBottom, sceneOuterContours);
