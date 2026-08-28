@@ -46,6 +46,9 @@ const INITIAL_PARAMS: RenderParams = {
   sideColor: "#718AE9",
   bottomColor: "#4F68C9",
   frontColor: "#A6B6FF",
+  extrudePrimary: "#1A81FF",
+  extrudeSecondary: "#8A58FE",
+  extrudeAngle: 135,
   angle: 135,
   extrusionAngle: 30,
   shadowLength: 34,
@@ -84,15 +87,22 @@ function slug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/gi, "-").replace(/^-|-$/g, "") || "icon";
 }
 
-function downloadBlob(blob: Blob, filename: string) {
+export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
+  anchor.rel = "noopener";
+  anchor.style.display = "none";
   document.body.appendChild(anchor);
-  anchor.click();
+  const legacyNavigator = navigator as Navigator & { msSaveOrOpenBlob?: (blob: Blob, defaultName?: string) => boolean };
+  if (legacyNavigator.msSaveOrOpenBlob) {
+    legacyNavigator.msSaveOrOpenBlob(blob, filename);
+  } else {
+    anchor.click();
+  }
   anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 400);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 async function blobToDataUrl(blob: Blob) {
@@ -252,7 +262,7 @@ export default function Home() {
       duotone: ["primary", "secondary", "shadowLength", "duotoneCutoutColor"],
       gradient: ["primary", "secondary", "angle"],
       glass: ["glassPrimary", "glassSecondary", "glassAngle", "glassOpacity", "glassBlur", "glassHighlight"],
-      extrude: ["extrusion", "extrusionAngle", "safeExtrusion", "frontColor", "sideColor", "bottomColor", "extrudeCutoutColor"],
+      extrude: ["extrusion", "extrusionAngle", "safeExtrusion", "frontColor", "extrudePrimary", "extrudeSecondary", "extrudeAngle", "sideColor", "bottomColor", "extrudeCutoutColor"],
       scene: ["sceneExtrusion", "sceneExtrusionAngle", "sceneSkewAngle", "scenePrimary", "sceneSecondary", "sceneAngle", "sceneSideColor", "sceneBottomColor", "sceneBlur", "sceneHighlight", "sceneSafeExtrusion", "sceneCutoutColor", "sceneObjectHeight", "sceneMotionHeight", "sceneObjectDecor", "sceneMotionDecor", "sceneBase", "sceneDecor"],
     };
     setParams((current) => resetKeys[selectedStyle].reduce((next, key) => ({ ...next, [key]: INITIAL_PARAMS[key] }), current));
@@ -400,7 +410,7 @@ export default function Home() {
           {selectedStyle === "duotone" && <><div className="parameter-group"><div className="group-title"><Palette size={15}/><span>分层颜色</span></div><div className="color-row"><ColorField label="顶层颜色" color={params.primary} onChange={(value) => updateParam("primary", value)} /><ColorField label="底层颜色" color={params.secondary} onChange={(value) => updateParam("secondary", value)} /></div></div><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>层间投影</span></div><SliderField label="投影远近" value={params.shadowLength} min={8} max={76} suffix=" px" onChange={(value) => updateParam("shadowLength", value)} /></div><div className="parameter-group"><div className="group-title"><Layers3 size={15}/><span>独立镂空</span></div><ColorField label="镂空颜色" color={params.duotoneCutoutColor} onChange={(value) => updateParam("duotoneCutoutColor", value)} /></div></>}
           {selectedStyle === "gradient" && <div className="parameter-group"><div className="group-title"><Palette size={15}/><span>线性渐变</span></div><div className="color-row"><ColorField label="起始色" color={params.primary} onChange={(value) => updateParam("primary", value)} /><ColorField label="结束色" color={params.secondary} onChange={(value) => updateParam("secondary", value)} /></div><SliderField label="渐变角度" value={params.angle} min={0} max={360} suffix="°" onChange={(value) => updateParam("angle", value)} /></div>}
           {selectedStyle === "glass" && <><div className="parameter-group"><div className="group-title"><Palette size={15}/><span>磨砂玻璃着色</span></div><div className="color-row"><ColorField label="冷光起始色" color={params.glassPrimary} onChange={(value) => updateParam("glassPrimary", value)} /><ColorField label="折射结束色" color={params.glassSecondary} onChange={(value) => updateParam("glassSecondary", value)} /></div><SliderField label="玻璃渐变角度" value={params.glassAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("glassAngle", value)} /></div><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>微软磨砂玻璃</span></div><p>独立的透光、扩散和反射参数，只作用于当前玻璃标本。</p><SliderField label="透光强度" value={params.glassOpacity} min={0} max={100} suffix="%" onChange={(value) => updateParam("glassOpacity", value)} /><SliderField label="扩散浓度" value={params.glassBlur} min={0} max={100} suffix="%" onChange={(value) => updateParam("glassBlur", value)} /><SliderField label="边缘反射" value={params.glassHighlight} min={0} max={100} suffix="%" onChange={(value) => updateParam("glassHighlight", value)} /></div></>}
-          {selectedStyle === "extrude" && <><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>挤出结构</span></div><SliderField label="挤出厚度" value={params.extrusion} min={4} max={42} suffix=" px" onChange={(value) => updateParam("extrusion", value)} /><SliderField label="挤出角度" value={params.extrusionAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("extrusionAngle", value)} /><div className="switch-row safety-switch"><div><strong>复杂轮廓安全模式</strong><span>{params.safeExtrusion && extrusionSafety.recommendedThickness < params.extrusion ? `${extrusionSafety.rationale}：生效 ${extrusionSafety.recommendedThickness}px` : "自动压低极细、尖角或多子路径的有效厚度"}</span></div><Switch checked={params.safeExtrusion} onCheckedChange={(value) => updateParam("safeExtrusion", value)} /></div></div><div className="parameter-group face-color-group"><div className="group-title"><Layers3 size={15}/><span>融合双分面配色</span></div><p>当前为{activeFacePairLabel}挤出。圆形、圆角及异形 SVG 均沿真实轮廓等距外扩；两个相邻外边可分别调整颜色。</p><div className="face-color-grid"><ColorField label="正面" color={params.frontColor} onChange={(value) => updateParam("frontColor", value)} /><ColorField label={primaryFaceLabel} color={params.sideColor} onChange={(value) => updateParam("sideColor", value)} /><ColorField label={secondaryFaceLabel} color={params.bottomColor} onChange={(value) => updateParam("bottomColor", value)} /><ColorField label="镂空颜色" color={params.extrudeCutoutColor} onChange={(value) => updateParam("extrudeCutoutColor", value)} /></div></div></>}
+          {selectedStyle === "extrude" && <><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>挤出结构</span></div><SliderField label="挤出厚度" value={params.extrusion} min={4} max={42} suffix=" px" onChange={(value) => updateParam("extrusion", value)} /><SliderField label="挤出角度" value={params.extrusionAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("extrusionAngle", value)} /><div className="switch-row safety-switch"><div><strong>复杂轮廓安全模式</strong><span>{params.safeExtrusion && extrusionSafety.recommendedThickness < params.extrusion ? `${extrusionSafety.rationale}：生效 ${extrusionSafety.recommendedThickness}px` : "自动压低极细、尖角或多子路径的有效厚度"}</span></div><Switch checked={params.safeExtrusion} onCheckedChange={(value) => updateParam("safeExtrusion", value)} /></div></div><div className="parameter-group face-color-group"><div className="group-title"><Layers3 size={15}/><span>正面渐变与融合双分面</span></div><p>正面使用独立整体渐变；当前为{activeFacePairLabel}挤出。圆形、圆角及异形 SVG 均沿真实轮廓等距外扩。</p><div className="color-row"><ColorField label="正面起始色" color={params.extrudePrimary} onChange={(value) => updateParam("extrudePrimary", value)} /><ColorField label="正面结束色" color={params.extrudeSecondary} onChange={(value) => updateParam("extrudeSecondary", value)} /></div><SliderField label="正面渐变角度" value={params.extrudeAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("extrudeAngle", value)} /><div className="face-color-grid"><ColorField label={primaryFaceLabel} color={params.sideColor} onChange={(value) => updateParam("sideColor", value)} /><ColorField label={secondaryFaceLabel} color={params.bottomColor} onChange={(value) => updateParam("bottomColor", value)} /><ColorField label="镂空颜色" color={params.extrudeCutoutColor} onChange={(value) => updateParam("extrudeCutoutColor", value)} /></div></div></>}
           {selectedStyle === "scene" && <>
             <div className="parameter-group"><div className="group-title"><Palette size={15}/><span>场景主体颜色</span></div><div className="color-row"><ColorField label="起始色" color={params.scenePrimary} onChange={(value) => updateParam("scenePrimary", value)} /><ColorField label="结束色" color={params.sceneSecondary} onChange={(value) => updateParam("sceneSecondary", value)} /></div><SliderField label="场景渐变角度" value={params.sceneAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("sceneAngle", value)} /></div>
             <div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>斜切实体</span></div><p className="scene-geometry-note">右边保持固定，左边向上斜切；仅沿真实外轮廓等距挤出。镂空层独立于主体颜色与挤出，可单独调整颜色。当前强度：{params.sceneSkewAngle}°。</p><div className="scene-skew-presets"><span>斜切预设</span><div>{[20,30,40].map((angle) => <button key={angle} onClick={() => updateParam("sceneSkewAngle", angle)} className={params.sceneSkewAngle === angle ? "scene-kit-active" : ""}>{angle}°</button>)}</div></div><SliderField label="3D 挤出厚度" value={params.sceneExtrusion} min={4} max={200} suffix=" px" onChange={(value) => updateParam("sceneExtrusion", value)} /><SliderField label="3D 挤出角度" value={params.sceneExtrusionAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("sceneExtrusionAngle", value)} /><div className="switch-row safety-switch"><div><strong>复杂轮廓安全模式</strong><span>{params.sceneSafeExtrusion && sceneExtrusionSafety.recommendedThickness < params.sceneExtrusion ? `${sceneExtrusionSafety.rationale}：生效 ${sceneExtrusionSafety.recommendedThickness}px` : "仅针对 3D 场景自动压低极细、尖角或多子路径的有效厚度"}</span></div><Switch checked={params.sceneSafeExtrusion} onCheckedChange={(value) => updateParam("sceneSafeExtrusion", value)} /></div><SliderField label="场景磨砂模糊" value={params.sceneBlur} min={0} max={24} suffix=" px" onChange={(value) => updateParam("sceneBlur", value)} /><SliderField label="场景边缘高光" value={params.sceneHighlight} min={0} max={100} suffix="%" onChange={(value) => updateParam("sceneHighlight", value)} /></div>

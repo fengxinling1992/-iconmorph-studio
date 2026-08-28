@@ -13,6 +13,9 @@ export type RenderParams = {
   sideColor: string;
   bottomColor: string;
   frontColor: string;
+  extrudePrimary: string;
+  extrudeSecondary: string;
+  extrudeAngle: number;
   angle: number;
   extrusionAngle: number;
   shadowLength: number;
@@ -210,6 +213,9 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const side = escapeXml(params.sideColor);
   const bottom = escapeXml(params.bottomColor);
   const front = escapeXml(params.frontColor);
+  const extrudePrimary = escapeXml(params.extrudePrimary);
+  const extrudeSecondary = escapeXml(params.extrudeSecondary);
+  const extrudeGradient = gradientAngle(params.extrudeAngle);
   const scenePrimary = escapeXml(params.scenePrimary);
   const sceneSecondary = escapeXml(params.sceneSecondary);
   const sceneSide = escapeXml(params.sceneSideColor);
@@ -257,6 +263,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const secondaryOffset = (distance: number) => colorizedFrame(52 + distance, 52 + distance, 216, 216, s, "secondary", true);
   const darkOffset = colorizedFrame(57, 59, 216, 216, "#173746", "glass-shadow", true);
   const gradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-main`, p, s, gradient, "#F7F4EE");
+  const extrudeGradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-extrude`, extrudePrimary, extrudeSecondary, extrudeGradient, extrudeCutout);
   const glassGradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-glass`, glassPrimary, glassSecondary, glassGradient, "#F7F4EE");
   const glassReflection = colorizedFrame(47, 43, 216, 216, "#FFFFFF", "glass-reflection", true);
   const glassOutlineClass = `glass-outline-${uid}`;
@@ -382,17 +389,17 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
 
   if (style === "duotone") {
     const layerDistance = Math.max(4, params.shadowLength * .42);
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${secondaryOffset(layerDistance)}<g filter="url(#lift-${uid})">${primaryCurrent}</g>${duotoneCutouts}`;
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F1F2F6"/>${secondaryOffset(layerDistance)}<g filter="url(#lift-${uid})">${primaryCurrent}</g>${duotoneCutouts}`;
   }
   if (style === "gradient") {
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${gradientCurrent}`;
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F1F2F6"/>${gradientCurrent}`;
   }
   if (style === "glass") {
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><rect width="${size}" height="${size}" rx="28" fill="url(#glass-stage-${uid})" opacity=".26"/><g opacity=".09" filter="url(#soft-${uid})">${darkOffset}</g><g opacity="${(glassTintOpacity * .88).toFixed(2)}">${glassGradientCurrent}</g><g opacity="${(glassTintOpacity * .34).toFixed(2)}" filter="url(#glass-frost-${uid})">${glassGradientCurrent}</g><g opacity="${glassReflectionOpacity.toFixed(2)}" filter="url(#soft-${uid})">${glassReflection}</g>${glassOutline}`;
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F1F2F6"/><rect width="${size}" height="${size}" rx="28" fill="url(#glass-stage-${uid})" opacity=".26"/><g opacity=".09" filter="url(#soft-${uid})">${darkOffset}</g><g opacity="${(glassTintOpacity * .88).toFixed(2)}">${glassGradientCurrent}</g><g opacity="${(glassTintOpacity * .34).toFixed(2)}" filter="url(#glass-frost-${uid})">${glassGradientCurrent}</g><g opacity="${glassReflectionOpacity.toFixed(2)}" filter="url(#soft-${uid})">${glassReflection}</g>${glassOutline}`;
   }
   if (style === "extrude") {
     const integratedExtrusion = createIntegratedExtrusion(52, 52, 216, 1, params.extrusionAngle, `volume-${uid}`, extrusion, false, side, bottom, sceneOuterContours);
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${integratedExtrusion}<g filter="url(#lift-${uid})">${current}</g>${extrudeCutouts}`;
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F1F2F6"/>${integratedExtrusion}<g filter="url(#lift-${uid})">${extrudeGradientCurrent}</g>${extrudeCutouts}`;
   }
   if (style === "scene") {
     const integratedExtrusion = createIntegratedExtrusion(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, .55, params.sceneExtrusionAngle, `volume-${uid}`, sceneExtrusion, true, sceneSide, sceneBottom, sceneOuterContours);

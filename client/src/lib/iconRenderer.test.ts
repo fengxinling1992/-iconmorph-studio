@@ -1,0 +1,55 @@
+import { describe, expect, it } from "vitest";
+import { defaultIcons, renderVariantSvg, RenderParams } from "./iconRenderer";
+
+const params: RenderParams = {
+  primary: "#A696FC",
+  secondary: "#67A7FB",
+  sideColor: "#718AE9",
+  bottomColor: "#4F68C9",
+  frontColor: "#A6B6FF",
+  extrudePrimary: "#1A81FF",
+  extrudeSecondary: "#8A58FE",
+  extrudeAngle: 135,
+  angle: 135,
+  extrusionAngle: 30,
+  shadowLength: 34,
+  extrusion: 18,
+  opacity: 72,
+  blur: 8,
+  highlight: 54,
+  glassPrimary: "#1A81FF",
+  glassSecondary: "#8A58FE",
+  glassAngle: 135,
+  glassOpacity: 82,
+  glassBlur: 22,
+  glassHighlight: 82,
+  safeExtrusion: true,
+  duotoneCutoutColor: "#FFFFFF",
+  sceneExtrusion: 92,
+  sceneExtrusionAngle: 325,
+  sceneSkewAngle: 30,
+  scenePrimary: "#A696FC",
+  sceneSecondary: "#67A7FB",
+  sceneAngle: 135,
+  sceneSideColor: "#718AE9",
+  sceneBottomColor: "#4F68C9",
+  sceneBlur: 8,
+  sceneHighlight: 54,
+  sceneSafeExtrusion: true,
+  extrudeCutoutColor: "#FFFFFF",
+  sceneCutoutColor: "#FFFFFF",
+  sceneObjectHeight: 0,
+  sceneMotionHeight: 0,
+  sceneObjectDecor: "orb",
+  sceneMotionDecor: "ribbon",
+};
+
+describe("renderVariantSvg", () => {
+  it("uses the independent 2.5D front gradient and unified card background", () => {
+    const svg = renderVariantSvg(defaultIcons()[0], "extrude", params);
+    expect(svg).toContain("#F1F2F6");
+    expect(svg).toContain("#1A81FF");
+    expect(svg).toContain("#8A58FE");
+    expect(svg).toContain("whole-archive-extrude");
+  });
+});
