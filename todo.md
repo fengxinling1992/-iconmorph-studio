@@ -331,20 +331,20 @@
 
 ## GitHub Pages 专用发布
 
-- [ ] 创建 `pages` 专用发布分支，保留 `main` 作为源码分支。
-- [ ] 配置 Vite 子路径与 GitHub Pages 静态资源引用。
-- [ ] 增加 GitHub Actions 构建并发布到 Pages 的工作流。
-- [ ] 验证 Actions、Pages 发布状态和最终访问地址，解决 404。
+- [x] 创建 `pages` 专用发布分支，保留 `main` 作为源码分支。
+- [x] 配置 Vite 子路径与 GitHub Pages 静态资源引用。
+- [x] 增加 GitHub Actions 构建并发布到 Pages 的工作流。
+- [x] 验证 Actions、Pages 发布状态和最终访问地址，解决 404。
 
 
 ## Pages Actions 构建修复
 
-- [ ] 修复 Actions 中 pnpm 版本与 packageManager 不一致导致的构建失败。
-- [ ] 重新运行 Pages 工作流并验证发布地址不再返回 404。
+- [x] 修复 Actions 中 pnpm 版本与 packageManager 不一致导致的构建失败。
+- [x] 重新运行 Pages 工作流并验证发布地址不再返回 404。
 
 
 ## Pages 启用修复
 
-- [ ] 让工作流自动启用 GitHub Pages，解决 Configure Pages 的 Not Found。
-- [ ] 重新运行 Actions，确认站点成功发布并可访问。
+- [x] 让工作流自动启用 GitHub Pages，解决 Configure Pages 的 Not Found。
+- [x] 重新运行 Actions，确认站点成功发布并可访问。
 
