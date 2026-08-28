@@ -260,7 +260,9 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const glassGradientCurrent = gradientFrame(52, 52, 216, 216, `whole-${uid}-glass`, glassPrimary, glassSecondary, glassGradient, "#F7F4EE");
   const glassReflection = colorizedFrame(47, 43, 216, 216, "#FFFFFF", "glass-reflection", true);
   const glassOutlineClass = `glass-outline-${uid}`;
-  const glassOutline = `<svg x="52" y="52" width="216" height="216" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><style>.${glassOutlineClass} *{fill:none!important;stroke:#FFFFFF!important;stroke-width:2.3!important;stroke-linejoin:round!important}</style><g class="${glassOutlineClass}" opacity="${(params.glassHighlight / 125).toFixed(2)}">${content}</g></svg>`;
+  const glassOutline = `<svg x="52" y="52" width="216" height="216" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><style>.${glassOutlineClass} *{fill:none!important;stroke:#FFFFFF!important;stroke-width:1.45!important;stroke-linejoin:round!important}</style><g class="${glassOutlineClass}" opacity="${(params.glassHighlight / 150).toFixed(2)}">${content}</g></svg>`;
+  const glassTintOpacity = Math.max(0, Math.min(1, params.glassOpacity / 100));
+  const glassReflectionOpacity = Math.max(0, Math.min(.06, (params.glassHighlight / 100) * .06));
   const cutoutLayer = (label: string, x: number, y: number, width: number, height: number, color: string, transform = "") => {
     const cutoutClass = `${label}-cutout-${uid}`;
     const transformAttribute = transform ? ` transform="${transform}"` : "";
@@ -275,11 +277,14 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const sceneExtrusionRadians = (params.sceneExtrusionAngle * Math.PI) / 180;
   const sceneOffsetX = Math.cos(sceneExtrusionRadians) * sceneExtrusionShift;
   const sceneOffsetY = Math.sin(sceneExtrusionRadians) * sceneExtrusionShift;
+  // 主面与等距挤出面的可见整体会沿 sceneOffsetY 扩展；将两者反向平移一半，使整体中心保持在底座的垂直轴线上。
+  const sceneVerticalCenterOffset = -sceneOffsetY / 2;
+  const sceneVerticalCenterTransform = `translate(0 ${sceneVerticalCenterOffset.toFixed(3)})`;
   const projectedSceneTop = sceneOrigin.y - sceneShear * sceneOrigin.width;
   const projectedSceneBottom = sceneOrigin.y + sceneOrigin.width;
   const sceneCropPadding = style === "scene" ? Math.max(0, Math.ceil(Math.max(
-    -(projectedSceneTop + Math.min(0, sceneOffsetY)) + 12,
-    projectedSceneBottom + Math.max(0, sceneOffsetY) - 320 + 12,
+    -(projectedSceneTop + sceneVerticalCenterOffset + Math.min(0, sceneOffsetY)) + 12,
+    projectedSceneBottom + sceneVerticalCenterOffset + Math.max(0, sceneOffsetY) - 320 + 12,
     -(sceneOrigin.x + Math.min(0, sceneOffsetX)) + 12,
     sceneRightEdge + Math.max(0, sceneOffsetX) - 320 + 12,
   ))) : 0;
@@ -372,7 +377,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     ? `<image href="${escapeXml(params.sceneDecor)}" x="10" y="${(36 - params.sceneMotionHeight).toFixed(1)}" width="300" height="220" preserveAspectRatio="xMidYMid meet"/>`
     : defaultDecorBehind;
   const sceneDecorFront = params.sceneDecor ? "" : defaultDecorFront;
-  const defs = `<defs><linearGradient id="glass-stage-${uid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F9FCFF"/><stop offset=".48" stop-color="#DDEEFF"/><stop offset="1" stop-color="#F2EAFF"/></linearGradient><filter id="soft-${uid}" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${Math.max(0.4, params.blur / 16).toFixed(2)}"/></filter><filter id="lift-${uid}" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="${Math.max(2, extrusion / 3)}" stdDeviation="${Math.max(2, extrusion / 2)}" flood-color="#1F3441" flood-opacity=".18"/></filter><filter id="glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.blur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 ${Math.min(.72, params.opacity / 130)} 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="glass-frost-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(.8, params.glassBlur / 11).toFixed(2)}" result="frost"/><feColorMatrix in="frost" type="matrix" values="1 0 0 0 .08  0 1 0 0 .11  0 0 1 0 .18  0 0 0 .40 0" result="bloom"/><feMerge><feMergeNode in="bloom"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="scene-glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.sceneBlur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 .72 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  const defs = `<defs><linearGradient id="glass-stage-${uid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F9FCFF"/><stop offset=".48" stop-color="#DDEEFF"/><stop offset="1" stop-color="#F2EAFF"/></linearGradient><filter id="soft-${uid}" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${Math.max(0.4, params.blur / 16).toFixed(2)}"/></filter><filter id="lift-${uid}" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="${Math.max(2, extrusion / 3)}" stdDeviation="${Math.max(2, extrusion / 2)}" flood-color="#1F3441" flood-opacity=".18"/></filter><filter id="glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.blur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 ${Math.min(.72, params.opacity / 130)} 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="glass-frost-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(.01, params.glassBlur / 16).toFixed(2)}" result="frost"/><feColorMatrix in="frost" type="matrix" values="1 0 0 0 .01  0 1 0 0 .03  0 0 1 0 .08  0 0 0 .34 0" result="bloom"/><feMerge><feMergeNode in="bloom"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="scene-glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.sceneBlur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 .72 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
   let artwork = "";
 
   if (style === "duotone") {
@@ -383,7 +388,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/>${gradientCurrent}`;
   }
   if (style === "glass") {
-    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><rect width="${size}" height="${size}" rx="28" fill="url(#glass-stage-${uid})" opacity=".48"/><g opacity=".13" filter="url(#soft-${uid})">${darkOffset}</g><g opacity="${(params.glassOpacity / 100).toFixed(2)}" filter="url(#glass-frost-${uid})">${glassGradientCurrent}</g><g opacity=".20" filter="url(#soft-${uid})">${glassReflection}</g>${glassOutline}`;
+    artwork = `<rect width="${size}" height="${size}" rx="28" fill="#F7F4EE"/><rect width="${size}" height="${size}" rx="28" fill="url(#glass-stage-${uid})" opacity=".26"/><g opacity=".09" filter="url(#soft-${uid})">${darkOffset}</g><g opacity="${(glassTintOpacity * .88).toFixed(2)}">${glassGradientCurrent}</g><g opacity="${(glassTintOpacity * .34).toFixed(2)}" filter="url(#glass-frost-${uid})">${glassGradientCurrent}</g><g opacity="${glassReflectionOpacity.toFixed(2)}" filter="url(#soft-${uid})">${glassReflection}</g>${glassOutline}`;
   }
   if (style === "extrude") {
     const integratedExtrusion = createIntegratedExtrusion(52, 52, 216, 1, params.extrusionAngle, `volume-${uid}`, extrusion, false, side, bottom, sceneOuterContours);
@@ -391,7 +396,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   }
   if (style === "scene") {
     const integratedExtrusion = createIntegratedExtrusion(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, .55, params.sceneExtrusionAngle, `volume-${uid}`, sceneExtrusion, true, sceneSide, sceneBottom, sceneOuterContours);
-    artwork = `${baseVisual}${sceneDecorBehind}${integratedExtrusion}<g filter="url(#scene-glow-${uid})">${projectedSceneCurrent}</g>${projectedSceneHighlight}${projectedSceneCutouts}${sceneDecorFront}`;
+    artwork = `${baseVisual}${sceneDecorBehind}<g transform="${sceneVerticalCenterTransform}">${integratedExtrusion}<g filter="url(#scene-glow-${uid})">${projectedSceneCurrent}</g>${projectedSceneHighlight}${projectedSceneCutouts}</g>${sceneDecorFront}`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
 }

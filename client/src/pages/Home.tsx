@@ -36,6 +36,7 @@ type OutputFormat = "svg" | "png";
 type LibraryGroup = { id: string; name: string; order: number };
 type LibraryIcon = IconAsset & { groupId: string; code: string };
 type IconLibrary = { groups: LibraryGroup[]; icons: LibraryIcon[] };
+type AssetCollection = "library" | "uploaded";
 
 const ICON_LIBRARY_URL = "/manus-storage/iconfont-library_e141fca4.json";
 
@@ -52,11 +53,11 @@ const INITIAL_PARAMS: RenderParams = {
   opacity: 72,
   blur: 8,
   highlight: 54,
-  glassPrimary: "#B7D8FF",
-  glassSecondary: "#D8C7FF",
+  glassPrimary: "#1A81FF",
+  glassSecondary: "#8A58FE",
   glassAngle: 135,
-  glassOpacity: 64,
-  glassBlur: 14,
+  glassOpacity: 82,
+  glassBlur: 22,
   glassHighlight: 82,
   safeExtrusion: true,
   duotoneCutoutColor: "#FFFFFF",
@@ -173,6 +174,7 @@ export default function Home() {
   const [assets, setAssets] = useState<IconAsset[]>(defaultIcons());
   const [activeId, setActiveId] = useState("archive");
   const [iconLibrary, setIconLibrary] = useState<IconLibrary>({ groups: [], icons: [] });
+  const [assetCollection, setAssetCollection] = useState<AssetCollection>("library");
   const [activeLibraryGroup, setActiveLibraryGroup] = useState("");
   const [librarySearch, setLibrarySearch] = useState("");
   const [libraryStatus, setLibraryStatus] = useState("正在载入图标库…");
@@ -214,11 +216,14 @@ export default function Home() {
 
   const activeAsset = useMemo(() => assets.find((asset) => asset.id === activeId) ?? assets[0], [assets, activeId]);
   const normalizedLibrarySearch = librarySearch.trim().toLocaleLowerCase();
-  const visibleLibraryIcons = useMemo(() => iconLibrary.icons.filter((icon) => {
+  const libraryGroups = useMemo(() => iconLibrary.groups.filter((group) => group.id !== "uploaded-assets"), [iconLibrary.groups]);
+  const libraryIcons = useMemo(() => iconLibrary.icons.filter((icon) => icon.groupId !== "uploaded-assets"), [iconLibrary.icons]);
+  const uploadedIcons = useMemo(() => iconLibrary.icons.filter((icon) => icon.groupId === "uploaded-assets"), [iconLibrary.icons]);
+  const visibleLibraryIcons = useMemo(() => (assetCollection === "library" ? libraryIcons : uploadedIcons).filter((icon) => {
     const matchesSearch = !normalizedLibrarySearch || `${icon.name} ${icon.code}`.toLocaleLowerCase().includes(normalizedLibrarySearch);
-    return matchesSearch && (normalizedLibrarySearch || icon.groupId === activeLibraryGroup);
-  }), [iconLibrary.icons, activeLibraryGroup, normalizedLibrarySearch]);
-  const libraryGroupCounts = useMemo(() => new Map(iconLibrary.groups.map((group) => [group.id, iconLibrary.icons.filter((icon) => icon.groupId === group.id).length])), [iconLibrary]);
+    return matchesSearch && (assetCollection === "uploaded" || normalizedLibrarySearch || icon.groupId === activeLibraryGroup);
+  }), [assetCollection, libraryIcons, uploadedIcons, activeLibraryGroup, normalizedLibrarySearch]);
+  const libraryGroupCounts = useMemo(() => new Map(libraryGroups.map((group) => [group.id, libraryIcons.filter((icon) => icon.groupId === group.id).length])), [libraryGroups, libraryIcons]);
   const selectedTemplate = styleCatalog.find((style) => style.id === selectedStyle) ?? styleCatalog[0];
   const extrusionSafety = useMemo(() => getExtrusionSafetyInfo(activeAsset, params.extrusion), [activeAsset, params.extrusion]);
   const sceneExtrusionSafety = useMemo(() => getExtrusionSafetyInfo(activeAsset, params.sceneExtrusion), [activeAsset, params.sceneExtrusion]);
@@ -268,6 +273,7 @@ export default function Home() {
         icons: [...current.icons, ...imported.map((asset) => ({ ...asset, groupId: "uploaded-assets", code: "UPLOAD" }))],
       }));
       setActiveLibraryGroup("uploaded-assets");
+      setAssetCollection("uploaded");
       setActiveId(imported[0].id);
       setIsBatch(imported.length > 1 || isBatch);
       setExportNote(`已载入 ${imported.length} 枚 SVG 源资产`);
@@ -351,10 +357,14 @@ export default function Home() {
       <main className="workspace">
         <aside className="asset-rail">
           <div className="rail-head"><div><span className="eyebrow">A / 资产库</span><h2>SVG 组件库</h2></div></div>
-          <button className="library-import" onClick={() => assetInput.current?.click()}><Upload size={17}/><span>上传图标</span><small>支持多选</small></button>
+          <div className="asset-collection-tabs" role="tablist" aria-label="资产分类">
+            <button role="tab" aria-selected={assetCollection === "library"} onClick={() => { setAssetCollection("library"); setLibrarySearch(""); if (!activeLibraryGroup) setActiveLibraryGroup(libraryGroups[0]?.id ?? ""); }} className={assetCollection === "library" ? "asset-collection-active" : ""}><span>图标库</span><small>{libraryIcons.length}</small></button>
+            <button role="tab" aria-selected={assetCollection === "uploaded"} onClick={() => { setAssetCollection("uploaded"); setLibrarySearch(""); }} className={assetCollection === "uploaded" ? "asset-collection-active" : ""}><span>导入 SVG</span><small>{uploadedIcons.length}</small></button>
+          </div>
+          {assetCollection === "uploaded" && <button className="library-import" onClick={() => assetInput.current?.click()}><Upload size={17}/><span>导入 SVG</span><small>支持多选</small></button>}
           <div className="library-search"><Search size={14}/><input value={librarySearch} onChange={(event) => setLibrarySearch(event.target.value)} placeholder="搜索图标名称或编码" aria-label="搜索图标库" /><button type="button" onClick={() => setLibrarySearch("")} aria-label="清空搜索">{librarySearch ? "×" : ""}</button></div>
-          <div className="library-label"><span>{librarySearch ? "搜索结果" : "图标库分组"}</span><span>{visibleLibraryIcons.length || assets.length}</span></div>
-          {iconLibrary.groups.length > 0 ? <><div className="library-group-tabs" role="tablist" aria-label="图标库分组">{iconLibrary.groups.map((group) => <button key={group.id} role="tab" aria-selected={activeLibraryGroup === group.id} onClick={() => { setActiveLibraryGroup(group.id); setLibrarySearch(""); }} className={activeLibraryGroup === group.id && !librarySearch ? "library-group-active" : ""}><span>{group.name}</span><small>{libraryGroupCounts.get(group.id) ?? 0}</small></button>)}</div><div className="library-icon-grid">{visibleLibraryIcons.map((asset) => <button key={asset.id} title={`${asset.name} · ${asset.code}`} onClick={() => setActiveId(asset.id)} className={`library-icon-card ${asset.id === activeId ? "library-icon-card-active" : ""}`}><span className="library-icon-preview" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} /><strong>{asset.name}</strong></button>)}</div>{!visibleLibraryIcons.length && <p className="library-empty">未找到匹配的图标</p>}</> : <><p className="library-loading">{libraryStatus}</p><div className="asset-list">{assets.map((asset) => <button key={asset.id} onClick={() => setActiveId(asset.id)} className={`asset-row ${asset.id === activeId ? "asset-row-active" : ""}`}><span className="asset-thumbnail" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} /><span><strong>{asset.name}</strong><small>SVG · 统一画布</small></span>{asset.id === activeId && <Check size={15} />}</button>)}</div></>}
+          <div className="library-label"><span>{librarySearch ? "搜索结果" : assetCollection === "library" ? "图标库分组" : "导入 SVG"}</span><span>{visibleLibraryIcons.length}</span></div>
+          {iconLibrary.groups.length > 0 ? <>{assetCollection === "library" && <div className="library-group-tabs" role="tablist" aria-label="图标库子分组">{libraryGroups.map((group) => <button key={group.id} role="tab" aria-selected={activeLibraryGroup === group.id} onClick={() => { setActiveLibraryGroup(group.id); setLibrarySearch(""); }} className={activeLibraryGroup === group.id && !librarySearch ? "library-group-active" : ""}><span>{group.name}</span><small>{libraryGroupCounts.get(group.id) ?? 0}</small></button>)}</div>}<div className="library-icon-grid">{visibleLibraryIcons.map((asset) => <button key={asset.id} title={`${asset.name} · ${asset.code}`} onClick={() => setActiveId(asset.id)} className={`library-icon-card ${asset.id === activeId ? "library-icon-card-active" : ""}`}><span className="library-icon-preview" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} /><strong>{asset.name}</strong></button>)}</div>{!visibleLibraryIcons.length && <div className="library-empty">{assetCollection === "uploaded" && !librarySearch ? <button onClick={() => assetInput.current?.click()}><Upload size={14}/> 导入第一枚 SVG</button> : "未找到匹配的图标"}</div>}</> : <><p className="library-loading">{libraryStatus}</p><div className="asset-list">{assets.map((asset) => <button key={asset.id} onClick={() => setActiveId(asset.id)} className={`asset-row ${asset.id === activeId ? "asset-row-active" : ""}`}><span className="asset-thumbnail" dangerouslySetInnerHTML={{ __html: normalizedSvgMarkup(asset) }} /><span><strong>{asset.name}</strong><small>SVG · 统一画布</small></span>{asset.id === activeId && <Check size={15} />}</button>)}</div></>}
           <div className="rail-footer"><span className="status-led"/> 真源模式已开启</div>
         </aside>
 
@@ -389,7 +399,7 @@ export default function Home() {
           <p className="control-description">{selectedTemplate.short}。此处只显示当前模板会使用的配置项；所有预览均在统一规范画布内等比完整显示。</p>
           {selectedStyle === "duotone" && <><div className="parameter-group"><div className="group-title"><Palette size={15}/><span>分层颜色</span></div><div className="color-row"><ColorField label="顶层颜色" color={params.primary} onChange={(value) => updateParam("primary", value)} /><ColorField label="底层颜色" color={params.secondary} onChange={(value) => updateParam("secondary", value)} /></div></div><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>层间投影</span></div><SliderField label="投影远近" value={params.shadowLength} min={8} max={76} suffix=" px" onChange={(value) => updateParam("shadowLength", value)} /></div><div className="parameter-group"><div className="group-title"><Layers3 size={15}/><span>独立镂空</span></div><ColorField label="镂空颜色" color={params.duotoneCutoutColor} onChange={(value) => updateParam("duotoneCutoutColor", value)} /></div></>}
           {selectedStyle === "gradient" && <div className="parameter-group"><div className="group-title"><Palette size={15}/><span>线性渐变</span></div><div className="color-row"><ColorField label="起始色" color={params.primary} onChange={(value) => updateParam("primary", value)} /><ColorField label="结束色" color={params.secondary} onChange={(value) => updateParam("secondary", value)} /></div><SliderField label="渐变角度" value={params.angle} min={0} max={360} suffix="°" onChange={(value) => updateParam("angle", value)} /></div>}
-          {selectedStyle === "glass" && <><div className="parameter-group"><div className="group-title"><Palette size={15}/><span>磨砂玻璃着色</span></div><div className="color-row"><ColorField label="冷光起始色" color={params.glassPrimary} onChange={(value) => updateParam("glassPrimary", value)} /><ColorField label="折射结束色" color={params.glassSecondary} onChange={(value) => updateParam("glassSecondary", value)} /></div><SliderField label="玻璃渐变角度" value={params.glassAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("glassAngle", value)} /></div><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>微软磨砂玻璃</span></div><p>独立的透光、扩散和反射参数，只作用于当前玻璃标本。</p><SliderField label="透光强度" value={params.glassOpacity} min={20} max={92} suffix="%" onChange={(value) => updateParam("glassOpacity", value)} /><SliderField label="扩散模糊" value={params.glassBlur} min={2} max={28} suffix=" px" onChange={(value) => updateParam("glassBlur", value)} /><SliderField label="边缘反射" value={params.glassHighlight} min={0} max={100} suffix="%" onChange={(value) => updateParam("glassHighlight", value)} /></div></>}
+          {selectedStyle === "glass" && <><div className="parameter-group"><div className="group-title"><Palette size={15}/><span>磨砂玻璃着色</span></div><div className="color-row"><ColorField label="冷光起始色" color={params.glassPrimary} onChange={(value) => updateParam("glassPrimary", value)} /><ColorField label="折射结束色" color={params.glassSecondary} onChange={(value) => updateParam("glassSecondary", value)} /></div><SliderField label="玻璃渐变角度" value={params.glassAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("glassAngle", value)} /></div><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>微软磨砂玻璃</span></div><p>独立的透光、扩散和反射参数，只作用于当前玻璃标本。</p><SliderField label="透光强度" value={params.glassOpacity} min={0} max={100} suffix="%" onChange={(value) => updateParam("glassOpacity", value)} /><SliderField label="扩散浓度" value={params.glassBlur} min={0} max={100} suffix="%" onChange={(value) => updateParam("glassBlur", value)} /><SliderField label="边缘反射" value={params.glassHighlight} min={0} max={100} suffix="%" onChange={(value) => updateParam("glassHighlight", value)} /></div></>}
           {selectedStyle === "extrude" && <><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>挤出结构</span></div><SliderField label="挤出厚度" value={params.extrusion} min={4} max={42} suffix=" px" onChange={(value) => updateParam("extrusion", value)} /><SliderField label="挤出角度" value={params.extrusionAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("extrusionAngle", value)} /><div className="switch-row safety-switch"><div><strong>复杂轮廓安全模式</strong><span>{params.safeExtrusion && extrusionSafety.recommendedThickness < params.extrusion ? `${extrusionSafety.rationale}：生效 ${extrusionSafety.recommendedThickness}px` : "自动压低极细、尖角或多子路径的有效厚度"}</span></div><Switch checked={params.safeExtrusion} onCheckedChange={(value) => updateParam("safeExtrusion", value)} /></div></div><div className="parameter-group face-color-group"><div className="group-title"><Layers3 size={15}/><span>融合双分面配色</span></div><p>当前为{activeFacePairLabel}挤出。圆形、圆角及异形 SVG 均沿真实轮廓等距外扩；两个相邻外边可分别调整颜色。</p><div className="face-color-grid"><ColorField label="正面" color={params.frontColor} onChange={(value) => updateParam("frontColor", value)} /><ColorField label={primaryFaceLabel} color={params.sideColor} onChange={(value) => updateParam("sideColor", value)} /><ColorField label={secondaryFaceLabel} color={params.bottomColor} onChange={(value) => updateParam("bottomColor", value)} /><ColorField label="镂空颜色" color={params.extrudeCutoutColor} onChange={(value) => updateParam("extrudeCutoutColor", value)} /></div></div></>}
           {selectedStyle === "scene" && <>
             <div className="parameter-group"><div className="group-title"><Palette size={15}/><span>场景主体颜色</span></div><div className="color-row"><ColorField label="起始色" color={params.scenePrimary} onChange={(value) => updateParam("scenePrimary", value)} /><ColorField label="结束色" color={params.sceneSecondary} onChange={(value) => updateParam("sceneSecondary", value)} /></div><SliderField label="场景渐变角度" value={params.sceneAngle} min={0} max={360} suffix="°" onChange={(value) => updateParam("sceneAngle", value)} /></div>
