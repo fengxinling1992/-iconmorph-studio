@@ -233,6 +233,17 @@ export default function Home() {
   const activeSceneFacePairLabel = `${activeSceneFaces[0]} + ${activeSceneFaces[1]}`;
 
   const updateParam = <K extends keyof RenderParams>(key: K, value: RenderParams[K]) => setParams((current) => ({ ...current, [key]: value }));
+  const resetActiveStyleParams = () => {
+    const resetKeys: Record<StyleId, Array<keyof RenderParams>> = {
+      duotone: ["primary", "secondary", "shadowLength"],
+      gradient: ["primary", "secondary", "angle"],
+      glass: ["primary", "secondary", "angle", "opacity", "blur", "highlight"],
+      extrude: ["extrusion", "extrusionAngle", "safeExtrusion", "frontColor", "sideColor", "bottomColor"],
+      scene: ["sceneExtrusion", "sceneExtrusionAngle", "sceneSkewAngle", "scenePrimary", "sceneSecondary", "sceneAngle", "sceneSideColor", "sceneBottomColor", "sceneBlur", "sceneHighlight", "sceneSafeExtrusion", "sceneObjectHeight", "sceneMotionHeight", "sceneObjectDecor", "sceneMotionDecor", "sceneBase", "sceneDecor"],
+    };
+    setParams((current) => resetKeys[selectedStyle].reduce((next, key) => ({ ...next, [key]: INITIAL_PARAMS[key] }), current));
+    setExportNote(`已恢复「${selectedTemplate.name}」的默认参数`);
+  };
 
   const parseAssets = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []).filter((file) => file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg"));
@@ -365,7 +376,7 @@ export default function Home() {
         </section>
 
         <aside className="control-rail">
-          <div className="control-head"><div><span className="eyebrow">D / 模板专属参数</span><h2>{selectedTemplate.name}</h2></div><button className="icon-button" onClick={() => setParams(INITIAL_PARAMS)} title="重置当前工作参数"><RefreshCw size={15}/></button></div>
+          <div className="control-head"><div><span className="eyebrow">D / 模板专属参数</span><h2>{selectedTemplate.name}</h2></div><button className="icon-button" onClick={resetActiveStyleParams} title={`恢复「${selectedTemplate.name}」默认参数`} aria-label={`恢复「${selectedTemplate.name}」默认参数`}><RefreshCw size={15}/></button></div>
           <p className="control-description">{selectedTemplate.short}。此处只显示当前模板会使用的配置项；所有预览均在统一规范画布内等比完整显示。</p>
           {selectedStyle === "duotone" && <><div className="parameter-group"><div className="group-title"><Palette size={15}/><span>分层颜色</span></div><div className="color-row"><ColorField label="顶层颜色" color={params.primary} onChange={(value) => updateParam("primary", value)} /><ColorField label="底层颜色" color={params.secondary} onChange={(value) => updateParam("secondary", value)} /></div></div><div className="parameter-group"><div className="group-title"><WandSparkles size={15}/><span>层间投影</span></div><SliderField label="投影远近" value={params.shadowLength} min={8} max={76} suffix=" px" onChange={(value) => updateParam("shadowLength", value)} /></div></>}
           {selectedStyle === "gradient" && <div className="parameter-group"><div className="group-title"><Palette size={15}/><span>线性渐变</span></div><div className="color-row"><ColorField label="起始色" color={params.primary} onChange={(value) => updateParam("primary", value)} /><ColorField label="结束色" color={params.secondary} onChange={(value) => updateParam("secondary", value)} /></div><SliderField label="渐变角度" value={params.angle} min={0} max={360} suffix="°" onChange={(value) => updateParam("angle", value)} /></div>}
