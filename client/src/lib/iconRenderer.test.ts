@@ -52,4 +52,16 @@ describe("renderVariantSvg", () => {
     expect(svg).toContain("#8A58FE");
     expect(svg).toContain("whole-archive-extrude");
   });
+
+  it("uses custom object and motion assets in the 3D scene", () => {
+    const svg = renderVariantSvg(defaultIcons()[0], "scene", {
+      ...params,
+      sceneObjectDecor: "custom",
+      sceneMotionDecor: "custom",
+      sceneObjectCustom: "data:image/svg+xml;base64,object",
+      sceneMotionCustom: "data:image/svg+xml;base64,motion",
+    });
+    expect(svg).toContain("data:image/svg+xml;base64,object");
+    expect(svg).toContain("data:image/svg+xml;base64,motion");
+  });
 });

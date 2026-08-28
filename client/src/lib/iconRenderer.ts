@@ -46,8 +46,10 @@ export type RenderParams = {
   sceneCutoutColor: string;
   sceneObjectHeight: number;
   sceneMotionHeight: number;
-  sceneObjectDecor: "none" | "orb" | "cube";
-  sceneMotionDecor: "none" | "ribbon" | "orbit";
+  sceneObjectDecor: "none" | "orb" | "cube" | "custom";
+  sceneMotionDecor: "none" | "ribbon" | "orbit" | "custom";
+  sceneObjectCustom?: string;
+  sceneMotionCustom?: string;
   sceneBase?: string;
   sceneDecor?: string;
 };
@@ -366,12 +368,16 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   };
   const sceneBase = params.sceneBase || "/manus-storage/scene-base_62b9c12e.svg";
   const baseVisual = `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
-  const motionDecor = params.sceneMotionDecor === "orbit"
-    ? `<image href="/manus-storage/orbit_2a9dae30.png" x="4" y="${(43 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="312" height="160" preserveAspectRatio="xMidYMid meet" opacity=".88"/>`
-    : params.sceneMotionDecor === "ribbon"
-      ? `<image href="/manus-storage/ribbon_394fae47.png" x="18" y="${(42 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`
-      : "";
-  const accentAsset = params.sceneObjectDecor === "cube" ? "/manus-storage/accent-cube_cb8409c6.png" : "/manus-storage/glass-orb_3c311794.png";
+  const motionDecor = params.sceneMotionDecor === "custom" && params.sceneMotionCustom
+    ? `<image href="${escapeXml(params.sceneMotionCustom)}" x="18" y="${(42 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`
+    : params.sceneMotionDecor === "orbit"
+      ? `<image href="/manus-storage/orbit_2a9dae30.png" x="4" y="${(43 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="312" height="160" preserveAspectRatio="xMidYMid meet" opacity=".88"/>`
+      : params.sceneMotionDecor === "ribbon"
+        ? `<image href="/manus-storage/ribbon_394fae47.png" x="18" y="${(42 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`
+        : "";
+  const accentAsset = params.sceneObjectDecor === "custom" && params.sceneObjectCustom
+    ? params.sceneObjectCustom
+    : params.sceneObjectDecor === "cube" ? "/manus-storage/accent-cube_cb8409c6.png" : "/manus-storage/glass-orb_3c311794.png";
   const objectDecorBehind = params.sceneObjectDecor === "none"
     ? ""
     : `<image href="${accentAsset}" x="48" y="${(132 - decorLift - params.sceneObjectHeight).toFixed(1)}" width="16" height="17" preserveAspectRatio="xMidYMid meet"/>`;
@@ -380,10 +386,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     : `<image href="${accentAsset}" x="247" y="${(81 - decorLift - params.sceneObjectHeight).toFixed(1)}" width="23" height="25" preserveAspectRatio="xMidYMid meet"/>`;
   const defaultDecorBehind = `${motionDecor}${objectDecorBehind}`;
   const defaultDecorFront = objectDecorFront;
-  const sceneDecorBehind = params.sceneDecor
-    ? `<image href="${escapeXml(params.sceneDecor)}" x="10" y="${(36 - params.sceneMotionHeight).toFixed(1)}" width="300" height="220" preserveAspectRatio="xMidYMid meet"/>`
-    : defaultDecorBehind;
-  const sceneDecorFront = params.sceneDecor ? "" : defaultDecorFront;
+  const sceneDecorBehind = defaultDecorBehind;
+  const sceneDecorFront = defaultDecorFront;
   const defs = `<defs><linearGradient id="glass-stage-${uid}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F9FCFF"/><stop offset=".48" stop-color="#DDEEFF"/><stop offset="1" stop-color="#F2EAFF"/></linearGradient><filter id="soft-${uid}" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="${Math.max(0.4, params.blur / 16).toFixed(2)}"/></filter><filter id="lift-${uid}" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="${Math.max(2, extrusion / 3)}" stdDeviation="${Math.max(2, extrusion / 2)}" flood-color="#1F3441" flood-opacity=".18"/></filter><filter id="glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.blur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 ${Math.min(.72, params.opacity / 130)} 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="glass-frost-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(.01, params.glassBlur / 16).toFixed(2)}" result="frost"/><feColorMatrix in="frost" type="matrix" values="1 0 0 0 .01  0 1 0 0 .03  0 0 1 0 .08  0 0 0 .34 0" result="bloom"/><feMerge><feMergeNode in="bloom"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="scene-glow-${uid}" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur in="SourceGraphic" stdDeviation="${Math.max(1, params.sceneBlur / 6)}" result="blur"/><feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 .15  0 0 1 0 .12  0 0 0 .72 0"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
   let artwork = "";
 
