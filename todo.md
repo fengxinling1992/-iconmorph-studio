@@ -328,3 +328,11 @@
 - [x] 将当前最新项目代码推送到新仓库。
 - [x] 验证远端默认分支、仓库可见性和最新提交。
 
+
+## GitHub Pages 专用发布
+
+- [ ] 创建 `pages` 专用发布分支，保留 `main` 作为源码分支。
+- [ ] 配置 Vite 子路径与 GitHub Pages 静态资源引用。
+- [ ] 增加 GitHub Actions 构建并发布到 Pages 的工作流。
+- [ ] 验证 Actions、Pages 发布状态和最终访问地址，解决 404。
+

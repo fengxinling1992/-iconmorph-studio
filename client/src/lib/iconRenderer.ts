@@ -189,6 +189,8 @@ export function getExtrusionSafetyInfo(asset: IconAsset, requestedThickness: num
   return { recommendedThickness, riskScore, rationale };
 }
 
+const STORAGE_BASE = `${import.meta.env.BASE_URL}manus-storage/`;
+
 function escapeXml(value: string) {
   return value.replace(/[<>&"']/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[char] || char);
 }
@@ -366,18 +368,18 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     const fallback = `<g fill="${primaryFaceColor}">${iconFrame(originX + offsetX, originY + offsetY, width)}</g>`;
     return geometryFaces || fallback;
   };
-  const sceneBase = params.sceneBase || "/manus-storage/scene-base_62b9c12e.svg";
+  const sceneBase = params.sceneBase || `${STORAGE_BASE}scene-base_62b9c12e.svg`;
   const baseVisual = `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
   const motionDecor = params.sceneMotionDecor === "custom" && params.sceneMotionCustom
     ? `<image href="${escapeXml(params.sceneMotionCustom)}" x="18" y="${(42 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`
     : params.sceneMotionDecor === "orbit"
-      ? `<image href="/manus-storage/orbit_2a9dae30.png" x="4" y="${(43 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="312" height="160" preserveAspectRatio="xMidYMid meet" opacity=".88"/>`
+      ? `<image href="${STORAGE_BASE}orbit_2a9dae30.png" x="4" y="${(43 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="312" height="160" preserveAspectRatio="xMidYMid meet" opacity=".88"/>`
       : params.sceneMotionDecor === "ribbon"
-        ? `<image href="/manus-storage/ribbon_394fae47.png" x="18" y="${(42 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`
+        ? `<image href="${STORAGE_BASE}ribbon_394fae47.png" x="18" y="${(42 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`
         : "";
   const accentAsset = params.sceneObjectDecor === "custom" && params.sceneObjectCustom
     ? params.sceneObjectCustom
-    : params.sceneObjectDecor === "cube" ? "/manus-storage/accent-cube_cb8409c6.png" : "/manus-storage/glass-orb_3c311794.png";
+    : params.sceneObjectDecor === "cube" ? `${STORAGE_BASE}accent-cube_cb8409c6.png` : `${STORAGE_BASE}glass-orb_3c311794.png`;
   const objectDecorBehind = params.sceneObjectDecor === "none"
     ? ""
     : `<image href="${accentAsset}" x="48" y="${(132 - decorLift - params.sceneObjectHeight).toFixed(1)}" width="16" height="17" preserveAspectRatio="xMidYMid meet"/>`;

@@ -38,7 +38,8 @@ type LibraryIcon = IconAsset & { groupId: string; code: string };
 type IconLibrary = { groups: LibraryGroup[]; icons: LibraryIcon[] };
 type AssetCollection = "library" | "uploaded";
 
-const ICON_LIBRARY_URL = "/manus-storage/iconfont-library_e141fca4.json";
+const STORAGE_BASE = `${import.meta.env.BASE_URL}manus-storage/`;
+const ICON_LIBRARY_URL = `${STORAGE_BASE}iconfont-library_e141fca4.json`;
 
 const INITIAL_PARAMS: RenderParams = {
   primary: "#A696FC",
@@ -117,7 +118,7 @@ async function blobToDataUrl(blob: Blob) {
 }
 
 async function inlineSceneAssets(svg: string) {
-  const referencedUrls = Array.from(svg.matchAll(/(?:href|xlink:href)="(\/manus-storage\/[^\"]+)"/g), (match) => match[1]);
+  const referencedUrls = Array.from(svg.matchAll(/(?:href|xlink:href)="([^\"]*manus-storage\/[^\"]+)"/g), (match) => match[1]);
   const urls = Array.from(new Set(referencedUrls));
   if (!urls.length) return svg;
   const replacements = await Promise.all(urls.map(async (url) => {
@@ -355,7 +356,7 @@ export default function Home() {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand-lockup">
-          <img src="/manus-storage/iconmorph-mark_cff258a8.png" alt="" className="brand-mark" />
+          <img src={`${STORAGE_BASE}iconmorph-mark_cff258a8.png`} alt="" className="brand-mark" />
           <div><p className="brand-name">IconMorph <span className="brand-tool-name">SVG图标风格化工具</span></p></div>
         </div>
         <div className="topbar-middle" aria-hidden="true" />
