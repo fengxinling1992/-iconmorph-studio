@@ -17,14 +17,16 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install dependencies & Build
         run: |
-          cd client
-          npm install
-          npm run build
+          pnpm install
+          pnpm run build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./client/dist
+          publish_dir: ./dist
