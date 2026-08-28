@@ -228,7 +228,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   };
   const gradientFrame = (x: number, y: number, width: number, height: number, gradientId: string, start = p, end = s, direction = gradient, cutoutColor = "#F7F4EE") => {
     const paintClass = `gradient-${uid}-${gradientId}`;
-    return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><defs>${wholeGradient(gradientId, start, end, direction)}</defs><style>.${paintClass} *{fill:url(#${gradientId})!important}.${paintClass} [fill="none"]{fill:none!important;stroke:url(#${gradientId})!important}.${paintClass} [stroke]{stroke:url(#${gradientId})!important}.${paintClass} [fill="#fff"],.${paintClass} [fill="#ffffff"],.${paintClass} [fill="white"],.${paintClass} [fill="#F7F4EE"]{fill:${cutoutColor}!important}</style><g class="${paintClass}">${content}</g></svg>`;
+    return `<svg x="${x}" y="${y}" width="${width}" height="${height}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><defs>${wholeGradient(gradientId, start, end, direction)}</defs><style>.${paintClass} *{fill:url(#${gradientId})!important}.${paintClass} [fill="none"]{fill:none!important;stroke:url(#${gradientId})!important}.${paintClass} [stroke]{stroke:url(#${gradientId})!important}.${paintClass} [fill="#fff"],.${paintClass} [fill="#ffffff"],.${paintClass} [fill="#FFFFFF"],.${paintClass} [fill="white"],.${paintClass} [fill="#F7F4EE"]{fill:${cutoutColor}!important}</style><g class="${paintClass}">${content}</g></svg>`;
   };
   const current = colorizedFrame(52, 52, 216, 216, front, "front");
   const sceneCurrent = colorizedFrame(70, 62, 180, 180, front, "scene-front");
@@ -258,6 +258,8 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const projectedSceneCurrent = `<g transform="${sceneIsoTransform}">${gradientSceneCurrent}</g>`;
   const sceneHighlightClass = `scene-highlight-${uid}`;
   const projectedSceneHighlight = `<g transform="${sceneIsoTransform}"><svg x="${sceneOrigin.x}" y="${sceneOrigin.y}" width="${sceneOrigin.width}" height="${sceneOrigin.width}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><style>.${sceneHighlightClass} *{fill:none!important;stroke:#FFFFFF!important;stroke-width:2.1!important}</style><g class="${sceneHighlightClass}" opacity="${(params.sceneHighlight / 175).toFixed(2)}">${content}</g></svg></g>`;
+  const sceneCutoutClass = `scene-cutout-${uid}`;
+  const projectedSceneCutouts = `<g transform="${sceneIsoTransform}"><svg x="${sceneOrigin.x}" y="${sceneOrigin.y}" width="${sceneOrigin.width}" height="${sceneOrigin.width}" viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet"><style>.${sceneCutoutClass} *{fill:none!important;stroke:none!important}.${sceneCutoutClass} [fill="#fff"],.${sceneCutoutClass} [fill="#fff"] *,.${sceneCutoutClass} [fill="#ffffff"],.${sceneCutoutClass} [fill="#ffffff"] *,.${sceneCutoutClass} [fill="#FFFFFF"],.${sceneCutoutClass} [fill="#FFFFFF"] *,.${sceneCutoutClass} [fill="white"],.${sceneCutoutClass} [fill="white"] *,.${sceneCutoutClass} [fill="#F7F4EE"],.${sceneCutoutClass} [fill="#F7F4EE"] *{fill:#FFFFFF!important;stroke:#FFFFFF!important}</style><g class="${sceneCutoutClass}">${content}</g></svg></g>`;
   const createIntegratedExtrusion = (originX: number, originY: number, width: number, shiftScale: number, angle: number, maskKey: string, depth: number, isometric = false, primaryFaceColor = side, secondaryFaceColor = bottom, contours = sourceContours) => {
     // 标准等角参考以 30° 为基准：默认右侧和底侧外扩均与水平轴形成 30° 关系。
     const radians = (angle * Math.PI) / 180;
@@ -358,7 +360,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   }
   if (style === "scene") {
     const integratedExtrusion = createIntegratedExtrusion(sceneOrigin.x, sceneOrigin.y, sceneOrigin.width, .55, params.sceneExtrusionAngle, `volume-${uid}`, sceneExtrusion, true, sceneSide, sceneBottom, sceneOuterContours);
-    artwork = `${baseVisual}${sceneDecorBehind}${integratedExtrusion}<g filter="url(#scene-glow-${uid})">${projectedSceneCurrent}</g>${projectedSceneHighlight}${sceneDecorFront}`;
+    artwork = `${baseVisual}${sceneDecorBehind}${integratedExtrusion}<g filter="url(#scene-glow-${uid})">${projectedSceneCurrent}</g>${projectedSceneHighlight}${projectedSceneCutouts}${sceneDecorFront}`;
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${crop}" width="${size}" height="${size}" role="img" aria-label="${escapeXml(asset.name)} ${style}" preserveAspectRatio="xMidYMid meet">${defs}${artwork}</svg>`;
 }
