@@ -362,3 +362,16 @@
 - [x] 将 Pages 子路径从 `/-iconmorph-studio/` 更新为 `/iconmorph-studio/`。
 - [x] 重新运行发布工作流并验证新网址首页与静态资源可访问。
 
+
+## GitHub Pages 404 再次修复
+
+- [ ] 在浏览器和 HTTP 层复现新地址 404，核对 Pages API、部署状态和发布产物。
+- [ ] 修正实际导致工具首页不可访问的配置或产物问题。
+- [ ] 重新发布并验证工具首页、构建脚本、图标库和场景素材可访问。
+
+
+## GitHub Pages 子路径路由修复
+
+- [ ] 让 wouter 路由识别 `/iconmorph-studio/` 子路径，避免首页进入应用内 404。
+- [ ] 重新构建发布并在浏览器中验证首页显示 IconMorph Studio。
+
