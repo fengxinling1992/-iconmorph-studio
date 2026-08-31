@@ -351,14 +351,14 @@
 
 ## GitHub Pages 线上 404 复查
 
-- [ ] 核对 Pages 站点状态、仓库可见性、发布源和 deployment 元数据。
-- [ ] 修正导致 Actions 成功但站点未提供内容的 Pages 配置或发布方式。
-- [ ] 重新发布并验证首页、JS 和 Manus 静态资源均返回 HTTP 200。
+- [x] 核对 Pages 站点状态、仓库可见性、发布源和 deployment 元数据。
+- [x] 修正导致 Actions 成功但站点未提供内容的 Pages 配置或发布方式。
+- [x] 重新发布并验证首页、JS 和 Manus 静态资源均返回 HTTP 200。
 
 
 ## GitHub Pages 仓库重命名
 
-- [ ] 将 GitHub 仓库重命名为 `iconmorph-studio` 并同步本地远程地址。
-- [ ] 将 Pages 子路径从 `/-iconmorph-studio/` 更新为 `/iconmorph-studio/`。
-- [ ] 重新运行发布工作流并验证新网址首页与静态资源可访问。
+- [x] 将 GitHub 仓库重命名为 `iconmorph-studio` 并同步本地远程地址。
+- [x] 将 Pages 子路径从 `/-iconmorph-studio/` 更新为 `/iconmorph-studio/`。
+- [x] 重新运行发布工作流并验证新网址首页与静态资源可访问。
 
