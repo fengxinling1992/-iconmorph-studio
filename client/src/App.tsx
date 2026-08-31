@@ -1,25 +1,15 @@
 /** IconMorph Studio — 以材料实验室视觉系统统一的单页应用路由。 */
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 
 
 function Router() {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
-  const homePaths = base === "/" ? ["/"] : [base, `${base}/`];
-
-  return (
-    <Switch>
-      {homePaths.map(path => <Route key={path} path={path} component={Home} />)}
-      <Route path={"/404"} component={NotFound} />
-      {/* GitHub Pages serves the app below a repository path; keep the SPA entry reachable after static hosting rewrites. */}
-      <Route component={Home} />
-    </Switch>
-  );
+  // IconMorph Studio is a single-page tool. Rendering the workbench directly
+  // keeps the entry point stable under GitHub Pages repository subpaths.
+  return <Home />;
 }
 
 // NOTE: About Theme

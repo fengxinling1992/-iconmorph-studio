@@ -375,3 +375,9 @@
 - [ ] 让 wouter 路由识别 `/iconmorph-studio/` 子路径，避免首页进入应用内 404。
 - [ ] 重新构建发布并在浏览器中验证首页显示 IconMorph Studio。
 
+
+## 单页入口最终兼容
+
+- [ ] 对单页工具直接渲染 Home，避免 wouter 在 GitHub Pages 子路径下误判首页。
+- [ ] 重新发布并用浏览器确认工具工作台可见。
+
