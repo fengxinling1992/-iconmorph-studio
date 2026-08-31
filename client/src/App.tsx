@@ -17,7 +17,7 @@ function Router() {
       {homePaths.map(path => <Route key={path} path={path} component={Home} />)}
       <Route path={"/404"} component={NotFound} />
       {/* GitHub Pages serves the app below a repository path; keep the SPA entry reachable after static hosting rewrites. */}
-      <Route path={"*"} component={Home} />
+      <Route component={Home} />
     </Switch>
   );
 }
