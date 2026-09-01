@@ -40,6 +40,7 @@ const params: RenderParams = {
   sceneCutoutColor: "#FFFFFF",
   sceneObjectHeight: 0,
   sceneMotionHeight: 0,
+  sceneBaseDecor: "base1",
   sceneObjectDecor: "orb",
   sceneMotionDecor: "ribbon",
 };

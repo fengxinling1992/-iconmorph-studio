@@ -46,6 +46,7 @@ export type RenderParams = {
   sceneCutoutColor: string;
   sceneObjectHeight: number;
   sceneMotionHeight: number;
+  sceneBaseDecor: "none" | "base1" | "base2";
   sceneObjectDecor: "none" | "orb" | "cube" | "custom";
   sceneMotionDecor: "none" | "ribbon" | "orbit" | "custom";
   sceneObjectCustom?: string;
@@ -368,8 +369,12 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     const fallback = `<g fill="${primaryFaceColor}">${iconFrame(originX + offsetX, originY + offsetY, width)}</g>`;
     return geometryFaces || fallback;
   };
-  const sceneBase = params.sceneBase || `${STORAGE_BASE}scene-base_62b9c12e.svg`;
-  const baseVisual = `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
+  const sceneBase = params.sceneBase || (params.sceneBaseDecor === "base2"
+    ? `${STORAGE_BASE}iconmorph-isometric-base.png`
+    : `${STORAGE_BASE}scene-base_62b9c12e.svg`);
+  const baseVisual = params.sceneBaseDecor === "none"
+    ? ""
+    : `<image href="${escapeXml(sceneBase)}" x="7" y="116" width="306" height="194" preserveAspectRatio="xMidYMid meet"/>`;
   const motionDecor = params.sceneMotionDecor === "custom" && params.sceneMotionCustom
     ? `<image href="${escapeXml(params.sceneMotionCustom)}" x="18" y="${(42 - decorLift * .45 - params.sceneMotionHeight).toFixed(1)}" width="284" height="145" preserveAspectRatio="xMidYMid meet" opacity=".84"/>`
     : params.sceneMotionDecor === "orbit"
