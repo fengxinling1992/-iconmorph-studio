@@ -33,25 +33,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Download public scene assets
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p client/public/manus-storage
-          base="https://iconmorph-5azckkph.manus.space/manus-storage"
-          for file in \
-            iconfont-library_e141fca4.json \
-            iconmorph-mark_cff258a8.png \
-            iconmorph-material-stage_52df8fb3.png \
-            iconmorph-glass-swatch_8f6c1be0.png \
-            scene-base_62b9c12e.svg \
-            glass-orb_3c311794.png \
-            accent-cube_cb8409c6.png \
-            orbit_2a9dae30.png \
-            ribbon_394fae47.png; do
-            curl --fail --location --retry 3 --connect-timeout 10 \
-              "$base/$file" -o "client/public/manus-storage/$file"
-          done
 
       - name: Build frontend
         run: pnpm exec vite build
