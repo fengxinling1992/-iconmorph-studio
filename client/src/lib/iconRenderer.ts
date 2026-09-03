@@ -380,7 +380,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     return geometryFaces || fallback;
   };
   const sceneBase = params.sceneBase || (params.sceneBaseDecor === "base2"
-    ? `${STORAGE_BASE}iconmorph-isometric-base.png`
+    ? `${STORAGE_BASE}iconmorph-isometric-base.svg`
     : `${STORAGE_BASE}scene-base_62b9c12e.svg`);
   const baseVisual = params.sceneBaseDecor === "none"
     ? ""
