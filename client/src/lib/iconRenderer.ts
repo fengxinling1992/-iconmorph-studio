@@ -46,6 +46,7 @@ export type RenderParams = {
   sceneCutoutColor: string;
   sceneObjectHeight: number;
   sceneMotionHeight: number;
+  sceneScale: number;
   sceneBaseDecor: "none" | "base1" | "base2";
   sceneObjectDecor: "none" | "orb" | "cube" | "custom";
   sceneMotionDecor: "none" | "ribbon" | "orbit" | "custom";
@@ -282,6 +283,9 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   };
   const duotoneCutouts = cutoutLayer("duotone", 52, 52, 216, 216, duotoneCutout);
   const extrudeCutouts = cutoutLayer("extrude", 52, 52, 216, 216, extrudeCutout);
+  const sceneScale = Math.max(0.5, Math.min(1.5, params.sceneScale / 100));
+  // 场景 SVG 规范画布的中心点为 (160, 196)，缩放围绕该点进行。
+  const sceneCenter = { x: 160, y: 196 };
   const sceneOrigin = { x: 78, y: 114, width: 164 };
   const sceneRightEdge = sceneOrigin.x + sceneOrigin.width;
   const sceneShear = Math.tan((params.sceneSkewAngle * Math.PI) / 180);
@@ -291,14 +295,20 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
   const sceneOffsetY = Math.sin(sceneExtrusionRadians) * sceneExtrusionShift;
   // 主面与等距挤出面的可见整体会沿 sceneOffsetY 扩展；将两者反向平移一半，使整体中心保持在底座的垂直轴线上。
   const sceneVerticalCenterOffset = -sceneOffsetY / 2;
-  const sceneVerticalCenterTransform = `translate(0 ${sceneVerticalCenterOffset.toFixed(3)})`;
+  const sceneVerticalCenterTransform = `translate(${sceneCenter.x} ${sceneCenter.y}) scale(${sceneScale.toFixed(3)}) translate(${-sceneCenter.x} ${-sceneCenter.y}) translate(0 ${sceneVerticalCenterOffset.toFixed(3)})`;
   const projectedSceneTop = sceneOrigin.y - sceneShear * sceneOrigin.width;
   const projectedSceneBottom = sceneOrigin.y + sceneOrigin.width;
+  const scaledSceneBounds = {
+    top: sceneCenter.y + (projectedSceneTop + sceneVerticalCenterOffset + Math.min(0, sceneOffsetY) - sceneCenter.y) * sceneScale,
+    bottom: sceneCenter.y + (projectedSceneBottom + sceneVerticalCenterOffset + Math.max(0, sceneOffsetY) - sceneCenter.y) * sceneScale,
+    left: sceneCenter.x + (sceneOrigin.x + Math.min(0, sceneOffsetX) - sceneCenter.x) * sceneScale,
+    right: sceneCenter.x + (sceneRightEdge + Math.max(0, sceneOffsetX) - sceneCenter.x) * sceneScale,
+  };
   const sceneCropPadding = style === "scene" ? Math.max(0, Math.ceil(Math.max(
-    -(projectedSceneTop + sceneVerticalCenterOffset + Math.min(0, sceneOffsetY)) + 12,
-    projectedSceneBottom + sceneVerticalCenterOffset + Math.max(0, sceneOffsetY) - 320 + 12,
-    -(sceneOrigin.x + Math.min(0, sceneOffsetX)) + 12,
-    sceneRightEdge + Math.max(0, sceneOffsetX) - 320 + 12,
+    -scaledSceneBounds.top + 12,
+    scaledSceneBounds.bottom - 320 + 12,
+    -scaledSceneBounds.left + 12,
+    scaledSceneBounds.right - 320 + 12,
   ))) : 0;
   const crop = style === "scene" ? `${-sceneCropPadding} ${-sceneCropPadding} ${320 + sceneCropPadding * 2} ${320 + sceneCropPadding * 2}` : `0 0 ${size} ${size}`;
   const decorLift = Math.min(76, Math.max(7, sceneExtrusion * .42));
@@ -370,7 +380,7 @@ export function renderVariantSvg(asset: IconAsset, style: StyleId, params: Rende
     return geometryFaces || fallback;
   };
   const sceneBase = params.sceneBase || (params.sceneBaseDecor === "base2"
-    ? `${STORAGE_BASE}iconmorph-isometric-base.svg`
+    ? `${STORAGE_BASE}iconmorph-isometric-base.png`
     : `${STORAGE_BASE}scene-base_62b9c12e.svg`);
   const baseVisual = params.sceneBaseDecor === "none"
     ? ""

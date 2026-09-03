@@ -40,6 +40,7 @@ const params: RenderParams = {
   sceneCutoutColor: "#FFFFFF",
   sceneObjectHeight: 0,
   sceneMotionHeight: 0,
+  sceneScale: 100,
   sceneBaseDecor: "base1",
   sceneObjectDecor: "orb",
   sceneMotionDecor: "ribbon",
@@ -52,6 +53,11 @@ describe("renderVariantSvg", () => {
     expect(svg).toContain("#1A81FF");
     expect(svg).toContain("#8A58FE");
     expect(svg).toContain("whole-archive-extrude");
+  });
+
+  it("scales the 3D subject around the SVG center point", () => {
+    const svg = renderVariantSvg(defaultIcons()[0], "scene", { ...params, sceneScale: 125 });
+    expect(svg).toContain('translate(160 196) scale(1.250) translate(-160 -196)');
   });
 
   it("uses custom object and motion assets in the 3D scene", () => {
